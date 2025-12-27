@@ -1,152 +1,78 @@
 <script lang="ts">
-  import CircleIconButton from '$lib/components/elements/buttons/circle-icon-button.svelte';
-  import { modalManager } from '$lib/managers/modal-manager.svelte';
-  import ApiKeyModal from '$lib/modals/ApiKeyModal.svelte';
-  import ApiKeySecretModal from '$lib/modals/ApiKeySecretModal.svelte';
+  import OnEvents from '$lib/components/OnEvents.svelte';
+  import TableButton from '$lib/components/TableButton.svelte';
+  import { dateFormats } from '$lib/constants';
+  import { getApiKeyActions, getApiKeysActions } from '$lib/services/api-key.service';
   import { locale } from '$lib/stores/preferences.store';
-  import {
-    createApiKey,
-    deleteApiKey,
-    getApiKeys,
-    Permission,
-    updateApiKey,
-    type ApiKeyResponseDto,
-  } from '@immich/sdk';
+  import { getApiKeys, type ApiKeyResponseDto } from '@immich/sdk';
   import { Button } from '@immich/ui';
-  import { mdiPencilOutline, mdiTrashCanOutline } from '@mdi/js';
   import { t } from 'svelte-i18n';
   import { fade } from 'svelte/transition';
-  import { handleError } from '../../utils/handle-error';
-  import { notificationController, NotificationType } from '../shared-components/notification/notification';
 
-  interface Props {
+  type Props = {
     keys: ApiKeyResponseDto[];
-  }
+  };
 
   let { keys = $bindable() }: Props = $props();
 
-  const format: Intl.DateTimeFormatOptions = {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  };
-
-  async function refreshKeys() {
+  const onApiKeyCreate = async () => {
     keys = await getApiKeys();
-  }
+  };
 
-  const handleCreate = async () => {
-    const result = await modalManager.show(ApiKeyModal, {
-      title: $t('new_api_key'),
-      apiKey: { name: 'API Key' },
-      submitText: $t('create'),
-    });
-
-    if (!result) {
-      return;
-    }
-
-    try {
-      const { secret } = await createApiKey({
-        apiKeyCreateDto: {
-          name: result.name,
-          permissions: [Permission.All],
-        },
-      });
-
-      await modalManager.show(ApiKeySecretModal, { secret });
-    } catch (error) {
-      handleError(error, $t('errors.unable_to_create_api_key'));
-    } finally {
-      await refreshKeys();
+  const onApiKeyUpdate = (update: ApiKeyResponseDto) => {
+    for (const key of keys) {
+      if (key.id === update.id) {
+        Object.assign(key, update);
+      }
     }
   };
 
-  const handleUpdate = async (key: ApiKeyResponseDto) => {
-    const result = await modalManager.show(ApiKeyModal, {
-      title: $t('api_key'),
-      submitText: $t('save'),
-      apiKey: key,
-    });
-
-    if (!result) {
-      return;
-    }
-
-    try {
-      await updateApiKey({ id: key.id, apiKeyUpdateDto: { name: result.name } });
-      notificationController.show({
-        message: $t('saved_api_key'),
-        type: NotificationType.Info,
-      });
-    } catch (error) {
-      handleError(error, $t('errors.unable_to_save_api_key'));
-    } finally {
-      await refreshKeys();
-    }
+  const onApiKeyDelete = ({ id }: ApiKeyResponseDto) => {
+    keys = keys.filter((apiKey) => apiKey.id !== id);
   };
 
-  const handleDelete = async (key: ApiKeyResponseDto) => {
-    const isConfirmed = await modalManager.showDialog({ prompt: $t('delete_api_key_prompt') });
-    if (!isConfirmed) {
-      return;
-    }
-
-    try {
-      await deleteApiKey({ id: key.id });
-      notificationController.show({
-        message: $t('removed_api_key', { values: { name: key.name } }),
-        type: NotificationType.Info,
-      });
-    } catch (error) {
-      handleError(error, $t('errors.unable_to_remove_api_key'));
-    } finally {
-      await refreshKeys();
-    }
-  };
+  const { Create } = $derived(getApiKeysActions($t));
 </script>
+
+<OnEvents {onApiKeyCreate} {onApiKeyUpdate} {onApiKeyDelete} />
 
 <section class="my-4">
   <div class="flex flex-col gap-2" in:fade={{ duration: 500 }}>
     <div class="mb-2 flex justify-end">
-      <Button shape="round" size="small" onclick={() => handleCreate()}>{$t('new_api_key')}</Button>
+      <Button leadingIcon={Create.icon} shape="round" size="small" onclick={() => Create.onAction(Create)}
+        >{Create.title}</Button
+      >
     </div>
 
     {#if keys.length > 0}
       <table class="w-full text-start">
         <thead
-          class="mb-4 flex h-12 w-full rounded-md border bg-gray-50 text-immich-primary dark:border-immich-dark-gray dark:bg-immich-dark-gray dark:text-immich-dark-primary"
+          class="mb-4 flex h-12 w-full rounded-md border bg-gray-50 text-primary dark:border-immich-dark-gray dark:bg-immich-dark-gray"
         >
           <tr class="flex w-full place-items-center">
-            <th class="w-1/3 text-center text-sm font-medium">{$t('name')}</th>
-            <th class="w-1/3 text-center text-sm font-medium">{$t('created')}</th>
-            <th class="w-1/3 text-center text-sm font-medium">{$t('action')}</th>
+            <th class="w-1/4 text-center text-sm font-medium">{$t('name')}</th>
+            <th class="w-1/4 text-center text-sm font-medium">{$t('permission')}</th>
+            <th class="w-1/4 text-center text-sm font-medium">{$t('created')}</th>
+            <th class="w-1/4 text-center text-sm font-medium">{$t('action')}</th>
           </tr>
         </thead>
         <tbody class="block w-full overflow-y-auto rounded-md border dark:border-immich-dark-gray">
           {#each keys as key (key.id)}
+            {@const { Update, Delete } = getApiKeyActions($t, key)}
             <tr
-              class="flex h-[80px] w-full place-items-center text-center dark:text-immich-dark-fg even:bg-subtle/20 odd:bg-subtle/80"
+              class="flex h-20 w-full place-items-center text-center dark:text-immich-dark-fg even:bg-subtle/20 odd:bg-subtle/80"
             >
-              <td class="w-1/3 text-ellipsis px-4 text-sm">{key.name}</td>
-              <td class="w-1/3 text-ellipsis px-4 text-sm"
-                >{new Date(key.createdAt).toLocaleDateString($locale, format)}
+              <td class="w-1/4 text-ellipsis px-4 text-sm overflow-hidden">{key.name}</td>
+              <td
+                class="w-1/4 text-ellipsis px-4 text-xs overflow-hidden line-clamp-3 break-all font-mono"
+                title={JSON.stringify(key.permissions, undefined, 2)}>{key.permissions}</td
+              >
+              <td class="w-1/4 text-ellipsis px-4 text-sm overflow-hidden"
+                >{new Date(key.createdAt).toLocaleDateString($locale, dateFormats.settings)}
               </td>
-              <td class="flex flex-row flex-wrap justify-center gap-x-2 gap-y-1 w-1/3">
-                <CircleIconButton
-                  color="primary"
-                  icon={mdiPencilOutline}
-                  title={$t('edit_key')}
-                  size="16"
-                  onclick={() => handleUpdate(key)}
-                />
-                <CircleIconButton
-                  color="primary"
-                  icon={mdiTrashCanOutline}
-                  title={$t('delete_key')}
-                  size="16"
-                  onclick={() => handleDelete(key)}
-                />
+              <td class="flex flex-row flex-wrap justify-center gap-x-2 gap-y-1 w-1/4">
+                <TableButton action={Update} size="small" />
+                <TableButton action={Delete} size="small" />
               </td>
             </tr>
           {/each}

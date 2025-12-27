@@ -1,10 +1,9 @@
 <script lang="ts">
-  import Icon from '$lib/components/elements/icon.svelte';
   import { searchStore } from '$lib/stores/search.svelte';
-  import { mdiMagnify, mdiClose } from '@mdi/js';
-  import { fly } from 'svelte/transition';
+  import { Icon, IconButton } from '@immich/ui';
+  import { mdiClose, mdiMagnify } from '@mdi/js';
   import { t } from 'svelte-i18n';
-  import CircleIconButton from '$lib/components/elements/buttons/circle-icon-button.svelte';
+  import { fly } from 'svelte/transition';
 
   interface Props {
     id: string;
@@ -95,15 +94,15 @@
   {#if isOpen && isSearchSuggestions}
     <div
       transition:fly={{ y: 25, duration: 150 }}
-      class="absolute w-full rounded-b-3xl border-2 border-t-0 border-gray-200 bg-white pb-5 shadow-2xl transition-all dark:border-gray-700 dark:bg-immich-dark-gray dark:text-gray-300"
+      class="absolute w-full rounded-b-3xl border-2 border-t-0 border-gray-200 bg-white pb-5 shadow-2xl transition-all dark:border-gray-700 dark:bg-immich-dark-gray dark:text-gray-300 z-1"
     >
       <div class="flex items-center justify-between px-5 pt-5 text-xs">
-        <p class="py-2" aria-hidden={true}>{$t('recent_searches').toUpperCase()}</p>
+        <p class="uppercase py-2" aria-hidden={true}>{$t('recent_searches')}</p>
         {#if showClearAll}
           <button
             id={getId(0)}
             type="button"
-            class="rounded-lg p-2 font-semibold text-immich-primary aria-selected:bg-immich-primary/25 hover:bg-immich-primary/25 dark:text-immich-dark-primary"
+            class="rounded-lg p-2 font-semibold text-primary aria-selected:bg-immich-primary/25 hover:bg-immich-primary/25"
             role="option"
             onclick={() => handleClearAll()}
             tabindex="-1"
@@ -129,15 +128,17 @@
               aria-selected={selectedIndex === index}
               aria-label={savedSearchTerm}
             >
-              <Icon path={mdiMagnify} size="1.5em" ariaHidden={true} />
+              <Icon icon={mdiMagnify} size="1.5em" aria-hidden />
               {savedSearchTerm}
             </div>
             <div aria-hidden={true} class="absolute end-5 top-0 items-center justify-center py-3">
-              <CircleIconButton
+              <IconButton
+                shape="round"
+                color="secondary"
+                variant="ghost"
                 icon={mdiClose}
-                title={$t('remove')}
-                size="18"
-                padding="1"
+                aria-label={$t('remove')}
+                size="medium"
                 tabindex={-1}
                 onclick={() => handleClearSingle(savedSearchTerm)}
               />

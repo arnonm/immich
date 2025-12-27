@@ -1,10 +1,10 @@
 <script lang="ts">
   import { fade } from 'svelte/transition';
 
-  import Icon from '$lib/components/elements/icon.svelte';
   import PurchaseContent from '$lib/components/shared-components/purchasing/purchase-content.svelte';
   import SettingSwitch from '$lib/components/shared-components/settings/setting-switch.svelte';
-  import { modalManager } from '$lib/managers/modal-manager.svelte';
+  import { dateFormats } from '$lib/constants';
+  import { locale } from '$lib/stores/preferences.store';
   import { purchaseStore } from '$lib/stores/purchase.store';
   import { preferences, user } from '$lib/stores/user.store';
   import { handleError } from '$lib/utils/handle-error';
@@ -18,7 +18,7 @@
     isHttpError,
     type LicenseResponseDto,
   } from '@immich/sdk';
-  import { Button } from '@immich/ui';
+  import { Button, Icon, modalManager } from '@immich/ui';
   import { mdiKey } from '@mdi/js';
   import { onMount } from 'svelte';
   import { t } from 'svelte-i18n';
@@ -122,17 +122,19 @@
         <div
           class="bg-gray-50 border border-immich-dark-primary/20 dark:bg-immich-dark-primary/15 p-6 pe-12 rounded-xl flex place-content-center gap-4"
         >
-          <Icon path={mdiKey} size="56" class="text-immich-primary dark:text-immich-dark-primary" />
+          <Icon icon={mdiKey} size="56" class="text-primary" />
 
           <div>
-            <p class="text-immich-primary dark:text-immich-dark-primary font-semibold text-lg">
+            <p class="text-primary font-semibold text-lg">
               {$t('purchase_server_title')}
             </p>
 
             {#if $user.isAdmin && serverPurchaseInfo?.activatedAt}
               <p class="dark:text-white text-sm mt-1 col-start-2">
                 {$t('purchase_activated_time', {
-                  values: { date: new Date(serverPurchaseInfo.activatedAt) },
+                  values: {
+                    date: new Date(serverPurchaseInfo.activatedAt).toLocaleString($locale, dateFormats.settings),
+                  },
                 })}
               </p>
             {:else}
@@ -152,16 +154,18 @@
         <div
           class="bg-gray-50 border border-immich-dark-primary/20 dark:bg-immich-dark-primary/15 p-6 pe-12 rounded-xl flex place-content-center gap-4"
         >
-          <Icon path={mdiKey} size="56" class="text-immich-primary dark:text-immich-dark-primary" />
+          <Icon icon={mdiKey} size="56" class="text-primary" />
 
           <div>
-            <p class="text-immich-primary dark:text-immich-dark-primary font-semibold text-lg">
+            <p class="text-primary font-semibold text-lg">
               {$t('purchase_individual_title')}
             </p>
             {#if $user.license?.activatedAt}
               <p class="dark:text-white text-sm mt-1 col-start-2">
                 {$t('purchase_activated_time', {
-                  values: { date: new Date($user.license?.activatedAt) },
+                  values: {
+                    date: new Date($user.license?.activatedAt).toLocaleString($locale, dateFormats.settings),
+                  },
                 })}
               </p>
             {/if}

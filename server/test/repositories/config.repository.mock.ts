@@ -5,7 +5,7 @@ import { Mocked, vitest } from 'vitest';
 
 const envData: EnvData = {
   port: 2283,
-  environment: ImmichEnvironment.PRODUCTION,
+  environment: ImmichEnvironment.Production,
 
   buildMetadata: {},
   bull: {
@@ -31,7 +31,7 @@ const envData: EnvData = {
     },
 
     skipMigrations: false,
-    vectorExtension: DatabaseExtension.VECTORS,
+    vectorExtension: DatabaseExtension.Vectors,
   },
 
   licensePublicKey: {
@@ -72,6 +72,11 @@ const envData: EnvData = {
       root: '/build/www',
       indexHtml: '/build/www/index.html',
     },
+    corePlugin: '/build/corePlugin',
+  },
+
+  setup: {
+    allow: true,
   },
 
   storage: {
@@ -84,7 +89,14 @@ const envData: EnvData = {
     metrics: new Set(),
   },
 
-  workers: [ImmichWorker.API, ImmichWorker.MICROSERVICES],
+  workers: [ImmichWorker.Api, ImmichWorker.Microservices],
+
+  plugins: {
+    external: {
+      allow: true,
+      installFolder: '/app/data/plugins',
+    },
+  },
 
   noColor: false,
 };
@@ -93,6 +105,7 @@ export const mockEnvData = (config: Partial<EnvData>) => ({ ...envData, ...confi
 export const newConfigRepositoryMock = (): Mocked<RepositoryInterface<ConfigRepository>> => {
   return {
     getEnv: vitest.fn().mockReturnValue(mockEnvData({})),
-    getWorker: vitest.fn().mockReturnValue(ImmichWorker.API),
+    getWorker: vitest.fn().mockReturnValue(ImmichWorker.Api),
+    isDev: vitest.fn().mockReturnValue(false),
   };
 };

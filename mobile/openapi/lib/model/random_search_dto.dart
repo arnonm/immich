@@ -13,6 +13,7 @@ part of openapi.api;
 class RandomSearchDto {
   /// Returns a new [RandomSearchDto] instance.
   RandomSearchDto({
+    this.albumIds = const [],
     this.city,
     this.country,
     this.createdAfter,
@@ -27,6 +28,7 @@ class RandomSearchDto {
     this.libraryId,
     this.make,
     this.model,
+    this.ocr,
     this.personIds = const [],
     this.rating,
     this.size,
@@ -45,6 +47,8 @@ class RandomSearchDto {
     this.withPeople,
     this.withStacked,
   });
+
+  List<String> albumIds;
 
   String? city;
 
@@ -128,6 +132,14 @@ class RandomSearchDto {
 
   String? model;
 
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  String? ocr;
+
   List<String> personIds;
 
   /// Minimum value: -1
@@ -152,7 +164,7 @@ class RandomSearchDto {
 
   String? state;
 
-  List<String> tagIds;
+  List<String>? tagIds;
 
   ///
   /// Please note: This property should have been non-nullable! Since the specification file
@@ -252,6 +264,7 @@ class RandomSearchDto {
 
   @override
   bool operator ==(Object other) => identical(this, other) || other is RandomSearchDto &&
+    _deepEquality.equals(other.albumIds, albumIds) &&
     other.city == city &&
     other.country == country &&
     other.createdAfter == createdAfter &&
@@ -266,6 +279,7 @@ class RandomSearchDto {
     other.libraryId == libraryId &&
     other.make == make &&
     other.model == model &&
+    other.ocr == ocr &&
     _deepEquality.equals(other.personIds, personIds) &&
     other.rating == rating &&
     other.size == size &&
@@ -287,6 +301,7 @@ class RandomSearchDto {
   @override
   int get hashCode =>
     // ignore: unnecessary_parenthesis
+    (albumIds.hashCode) +
     (city == null ? 0 : city!.hashCode) +
     (country == null ? 0 : country!.hashCode) +
     (createdAfter == null ? 0 : createdAfter!.hashCode) +
@@ -301,11 +316,12 @@ class RandomSearchDto {
     (libraryId == null ? 0 : libraryId!.hashCode) +
     (make == null ? 0 : make!.hashCode) +
     (model == null ? 0 : model!.hashCode) +
+    (ocr == null ? 0 : ocr!.hashCode) +
     (personIds.hashCode) +
     (rating == null ? 0 : rating!.hashCode) +
     (size == null ? 0 : size!.hashCode) +
     (state == null ? 0 : state!.hashCode) +
-    (tagIds.hashCode) +
+    (tagIds == null ? 0 : tagIds!.hashCode) +
     (takenAfter == null ? 0 : takenAfter!.hashCode) +
     (takenBefore == null ? 0 : takenBefore!.hashCode) +
     (trashedAfter == null ? 0 : trashedAfter!.hashCode) +
@@ -320,10 +336,11 @@ class RandomSearchDto {
     (withStacked == null ? 0 : withStacked!.hashCode);
 
   @override
-  String toString() => 'RandomSearchDto[city=$city, country=$country, createdAfter=$createdAfter, createdBefore=$createdBefore, deviceId=$deviceId, isEncoded=$isEncoded, isFavorite=$isFavorite, isMotion=$isMotion, isNotInAlbum=$isNotInAlbum, isOffline=$isOffline, lensModel=$lensModel, libraryId=$libraryId, make=$make, model=$model, personIds=$personIds, rating=$rating, size=$size, state=$state, tagIds=$tagIds, takenAfter=$takenAfter, takenBefore=$takenBefore, trashedAfter=$trashedAfter, trashedBefore=$trashedBefore, type=$type, updatedAfter=$updatedAfter, updatedBefore=$updatedBefore, visibility=$visibility, withDeleted=$withDeleted, withExif=$withExif, withPeople=$withPeople, withStacked=$withStacked]';
+  String toString() => 'RandomSearchDto[albumIds=$albumIds, city=$city, country=$country, createdAfter=$createdAfter, createdBefore=$createdBefore, deviceId=$deviceId, isEncoded=$isEncoded, isFavorite=$isFavorite, isMotion=$isMotion, isNotInAlbum=$isNotInAlbum, isOffline=$isOffline, lensModel=$lensModel, libraryId=$libraryId, make=$make, model=$model, ocr=$ocr, personIds=$personIds, rating=$rating, size=$size, state=$state, tagIds=$tagIds, takenAfter=$takenAfter, takenBefore=$takenBefore, trashedAfter=$trashedAfter, trashedBefore=$trashedBefore, type=$type, updatedAfter=$updatedAfter, updatedBefore=$updatedBefore, visibility=$visibility, withDeleted=$withDeleted, withExif=$withExif, withPeople=$withPeople, withStacked=$withStacked]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
+      json[r'albumIds'] = this.albumIds;
     if (this.city != null) {
       json[r'city'] = this.city;
     } else {
@@ -394,6 +411,11 @@ class RandomSearchDto {
     } else {
     //  json[r'model'] = null;
     }
+    if (this.ocr != null) {
+      json[r'ocr'] = this.ocr;
+    } else {
+    //  json[r'ocr'] = null;
+    }
       json[r'personIds'] = this.personIds;
     if (this.rating != null) {
       json[r'rating'] = this.rating;
@@ -410,7 +432,11 @@ class RandomSearchDto {
     } else {
     //  json[r'state'] = null;
     }
+    if (this.tagIds != null) {
       json[r'tagIds'] = this.tagIds;
+    } else {
+    //  json[r'tagIds'] = null;
+    }
     if (this.takenAfter != null) {
       json[r'takenAfter'] = this.takenAfter!.toUtc().toIso8601String();
     } else {
@@ -483,6 +509,9 @@ class RandomSearchDto {
       final json = value.cast<String, dynamic>();
 
       return RandomSearchDto(
+        albumIds: json[r'albumIds'] is Iterable
+            ? (json[r'albumIds'] as Iterable).cast<String>().toList(growable: false)
+            : const [],
         city: mapValueOfType<String>(json, r'city'),
         country: mapValueOfType<String>(json, r'country'),
         createdAfter: mapDateTime(json, r'createdAfter', r''),
@@ -497,6 +526,7 @@ class RandomSearchDto {
         libraryId: mapValueOfType<String>(json, r'libraryId'),
         make: mapValueOfType<String>(json, r'make'),
         model: mapValueOfType<String>(json, r'model'),
+        ocr: mapValueOfType<String>(json, r'ocr'),
         personIds: json[r'personIds'] is Iterable
             ? (json[r'personIds'] as Iterable).cast<String>().toList(growable: false)
             : const [],

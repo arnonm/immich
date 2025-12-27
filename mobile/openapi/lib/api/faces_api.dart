@@ -16,7 +16,12 @@ class FacesApi {
 
   final ApiClient apiClient;
 
-  /// Performs an HTTP 'POST /faces' operation and returns the [Response].
+  /// Create a face
+  ///
+  /// Create a new face that has not been discovered by facial recognition. The content of the bounding box is considered a face.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [AssetFaceCreateDto] assetFaceCreateDto (required):
@@ -45,6 +50,10 @@ class FacesApi {
     );
   }
 
+  /// Create a face
+  ///
+  /// Create a new face that has not been discovered by facial recognition. The content of the bounding box is considered a face.
+  ///
   /// Parameters:
   ///
   /// * [AssetFaceCreateDto] assetFaceCreateDto (required):
@@ -55,7 +64,12 @@ class FacesApi {
     }
   }
 
-  /// Performs an HTTP 'DELETE /faces/{id}' operation and returns the [Response].
+  /// Delete a face
+  ///
+  /// Delete a face identified by the id. Optionally can be force deleted.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -87,6 +101,10 @@ class FacesApi {
     );
   }
 
+  /// Delete a face
+  ///
+  /// Delete a face identified by the id. Optionally can be force deleted.
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -99,7 +117,12 @@ class FacesApi {
     }
   }
 
-  /// Performs an HTTP 'GET /faces' operation and returns the [Response].
+  /// Retrieve faces for asset
+  ///
+  /// Retrieve all faces belonging to an asset.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -130,6 +153,10 @@ class FacesApi {
     );
   }
 
+  /// Retrieve faces for asset
+  ///
+  /// Retrieve all faces belonging to an asset.
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -151,7 +178,12 @@ class FacesApi {
     return null;
   }
 
-  /// Performs an HTTP 'PUT /faces/{id}' operation and returns the [Response].
+  /// Re-assign a face to another person
+  ///
+  /// Re-assign the face provided in the body to the person identified by the id in the path parameter.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -183,6 +215,10 @@ class FacesApi {
     );
   }
 
+  /// Re-assign a face to another person
+  ///
+  /// Re-assign the face provided in the body to the person identified by the id in the path parameter.
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):

@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Selectable } from 'kysely';
 import { AssetFace, AssetFile, Exif, Stack, Tag, User } from 'src/database';
-import { PropertyLifecycle } from 'src/decorators';
+import { HistoryBuilder, Property } from 'src/decorators';
 import { AuthDto } from 'src/dtos/auth.dto';
 import { ExifResponseDto, mapExif } from 'src/dtos/exif.dto';
 import {
@@ -13,14 +13,23 @@ import {
 import { TagResponseDto, mapTag } from 'src/dtos/tag.dto';
 import { UserResponseDto, mapUser } from 'src/dtos/user.dto';
 import { AssetStatus, AssetType, AssetVisibility } from 'src/enum';
+import { hexOrBufferToBase64 } from 'src/utils/bytes';
 import { mimeTypes } from 'src/utils/mime-types';
+import { ValidateEnum } from 'src/validation';
 
 export class SanitizedAssetResponseDto {
   id!: string;
-  @ApiProperty({ enumName: 'AssetTypeEnum', enum: AssetType })
+  @ValidateEnum({ enum: AssetType, name: 'AssetTypeEnum' })
   type!: AssetType;
   thumbhash!: string | null;
   originalMimeType?: string;
+  @ApiProperty({
+    type: 'string',
+    format: 'date-time',
+    description:
+      'The local date and time when the photo/video was taken, derived from EXIF metadata. This represents the photographer\'s local time regardless of timezone, stored as a timezone-agnostic timestamp. Used for timeline grouping by "local" days and months.',
+    example: '2024-01-15T14:30:00.000Z',
+  })
   localDateTime!: Date;
   duration!: string;
   livePhotoVideoId?: string | null;
@@ -28,21 +37,51 @@ export class SanitizedAssetResponseDto {
 }
 
 export class AssetResponseDto extends SanitizedAssetResponseDto {
+  @ApiProperty({
+    type: 'string',
+    format: 'date-time',
+    description: 'The UTC timestamp when the asset was originally uploaded to Immich.',
+    example: '2024-01-15T20:30:00.000Z',
+  })
+  createdAt!: Date;
   deviceAssetId!: string;
   deviceId!: string;
   ownerId!: string;
   owner?: UserResponseDto;
-  @PropertyLifecycle({ deprecatedAt: 'v1.106.0' })
+  @Property({ history: new HistoryBuilder().added('v1').deprecated('v1') })
   libraryId?: string | null;
   originalPath!: string;
   originalFileName!: string;
+  @ApiProperty({
+    type: 'string',
+    format: 'date-time',
+    description:
+      'The actual UTC timestamp when the file was created/captured, preserving timezone information. This is the authoritative timestamp for chronological sorting within timeline groups. Combined with timezone data, this can be used to determine the exact moment the photo was taken.',
+    example: '2024-01-15T19:30:00.000Z',
+  })
   fileCreatedAt!: Date;
+  @ApiProperty({
+    type: 'string',
+    format: 'date-time',
+    description:
+      'The UTC timestamp when the file was last modified on the filesystem. This reflects the last time the physical file was changed, which may be different from when the photo was originally taken.',
+    example: '2024-01-16T10:15:00.000Z',
+  })
   fileModifiedAt!: Date;
+  @ApiProperty({
+    type: 'string',
+    format: 'date-time',
+    description:
+      'The UTC timestamp when the asset record was last updated in the database. This is automatically maintained by the database and reflects when any field in the asset was last modified.',
+    example: '2024-01-16T12:45:30.000Z',
+  })
   updatedAt!: Date;
   isFavorite!: boolean;
   isArchived!: boolean;
   isTrashed!: boolean;
   isOffline!: boolean;
+  @ValidateEnum({ enum: AssetVisibility, name: 'AssetVisibility' })
+  visibility!: AssetVisibility;
   exifInfo?: ExifResponseDto;
   tags?: TagResponseDto[];
   people?: PersonWithFacesResponseDto[];
@@ -52,7 +91,7 @@ export class AssetResponseDto extends SanitizedAssetResponseDto {
   stack?: AssetStackResponseDto | null;
   duplicateId?: string | null;
 
-  @PropertyLifecycle({ deprecatedAt: 'v1.113.0' })
+  @Property({ history: new HistoryBuilder().added('v1').deprecated('v1.113.0') })
   resized?: boolean;
 }
 
@@ -85,7 +124,6 @@ export type MapAsset = {
   originalPath: string;
   owner?: User | null;
   ownerId: string;
-  sidecarPath: string | null;
   stack?: Stack | null;
   stackId: string | null;
   tags?: Tag[];
@@ -139,15 +177,6 @@ const mapStack = (entity: { stack?: Stack | null }) => {
   };
 };
 
-// if an asset is jsonified in the DB before being returned, its buffer fields will be hex-encoded strings
-export const hexOrBufferToBase64 = (encoded: string | Buffer) => {
-  if (typeof encoded === 'string') {
-    return Buffer.from(encoded.slice(2), 'hex').toString('base64');
-  }
-
-  return encoded.toString('base64');
-};
-
 export function mapAsset(entity: MapAsset, options: AssetMapOptions = {}): AssetResponseDto {
   const { stripMetadata = false, withStack = false } = options;
 
@@ -167,6 +196,7 @@ export function mapAsset(entity: MapAsset, options: AssetMapOptions = {}): Asset
 
   return {
     id: entity.id,
+    createdAt: entity.createdAt,
     deviceAssetId: entity.deviceAssetId,
     ownerId: entity.ownerId,
     owner: entity.owner ? mapUser(entity.owner) : undefined,
@@ -181,16 +211,17 @@ export function mapAsset(entity: MapAsset, options: AssetMapOptions = {}): Asset
     fileModifiedAt: entity.fileModifiedAt,
     localDateTime: entity.localDateTime,
     updatedAt: entity.updatedAt,
-    isFavorite: options.auth?.user.id === entity.ownerId ? entity.isFavorite : false,
-    isArchived: entity.visibility === AssetVisibility.ARCHIVE,
+    isFavorite: options.auth?.user.id === entity.ownerId && entity.isFavorite,
+    isArchived: entity.visibility === AssetVisibility.Archive,
     isTrashed: !!entity.deletedAt,
+    visibility: entity.visibility,
     duration: entity.duration ?? '0:00:00.00000',
     exifInfo: entity.exifInfo ? mapExif(entity.exifInfo) : undefined,
     livePhotoVideoId: entity.livePhotoVideoId,
     tags: entity.tags?.map((tag) => mapTag(tag)),
     people: peopleWithFaces(entity.faces),
     unassignedFaces: entity.faces?.filter((face) => !face.person).map((a) => mapFacesWithoutPerson(a)),
-    checksum: hexOrBufferToBase64(entity.checksum),
+    checksum: hexOrBufferToBase64(entity.checksum)!,
     stack: withStack ? mapStack(entity) : undefined,
     isOffline: entity.isOffline,
     hasMetadata: true,

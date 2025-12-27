@@ -103,6 +103,20 @@ async def preload_models(preload: PreloadModelData) -> None:
             ModelTask.FACIAL_RECOGNITION,
         )
 
+    if preload.ocr.detection is not None:
+        await load_models(
+            preload.ocr.detection,
+            ModelType.DETECTION,
+            ModelTask.OCR,
+        )
+
+    if preload.ocr.recognition is not None:
+        await load_models(
+            preload.ocr.recognition,
+            ModelType.RECOGNITION,
+            ModelTask.OCR,
+        )
+
     if preload.clip_fallback is not None:
         log.warning(
             "Deprecated env variable: 'MACHINE_LEARNING_PRELOAD__CLIP'. "
@@ -183,7 +197,9 @@ async def run_inference(payload: Image | str, entries: InferenceEntries) -> Infe
     response: InferenceResponse = {}
 
     async def _run_inference(entry: InferenceEntry) -> None:
-        model = await model_cache.get(entry["name"], entry["type"], entry["task"], ttl=settings.model_ttl)
+        model = await model_cache.get(
+            entry["name"], entry["type"], entry["task"], ttl=settings.model_ttl, **entry["options"]
+        )
         inputs = [payload]
         for dep in model.depends:
             try:
@@ -244,7 +260,6 @@ async def load(model: InferenceModel) -> InferenceModel:
 
 async def idle_shutdown_task() -> None:
     while True:
-        log.debug("Checking for inactivity...")
         if (
             last_called is not None
             and not active_requests

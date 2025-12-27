@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { Kysely } from 'kysely';
 import { InjectKysely } from 'nestjs-kysely';
-import { DB } from 'src/db';
 import { DummyValue, GenerateSql } from 'src/decorators';
 import { DatabaseAction, EntityType } from 'src/enum';
+import { DB } from 'src/schema';
 
 export interface AuditSearch {
   action?: DatabaseAction;
@@ -18,7 +18,7 @@ export class AuditRepository {
   @GenerateSql({
     params: [
       DummyValue.DATE,
-      { action: DatabaseAction.CREATE, entityType: EntityType.ASSET, userIds: [DummyValue.UUID] },
+      { action: DatabaseAction.Create, entityType: EntityType.Asset, userIds: [DummyValue.UUID] },
     ],
   })
   async getAfter(since: Date, options: AuditSearch): Promise<string[]> {
@@ -38,7 +38,6 @@ export class AuditRepository {
     return records.map(({ entityId }) => entityId);
   }
 
-  @GenerateSql({ params: [DummyValue.DATE] })
   async removeBefore(before: Date): Promise<void> {
     await this.db.deleteFrom('audit').where('createdAt', '<', before).execute();
   }

@@ -67,31 +67,45 @@ enum StoreKey<T> {
   loadOriginalVideo<bool>._(136),
   manageLocalMediaAndroid<bool>._(137),
 
+  // Read-only Mode settings
+  readonlyModeEnabled<bool>._(138),
+
+  autoPlayVideo<bool>._(139),
+  albumGridView<bool>._(140),
+
   // Experimental stuff
-  photoManagerCustomFilter<bool>._(1000);
+  photoManagerCustomFilter<bool>._(1000),
+  betaPromptShown<bool>._(1001),
+  betaTimeline<bool>._(1002),
+  enableBackup<bool>._(1003),
+  useWifiForUploadVideos<bool>._(1004),
+  useWifiForUploadPhotos<bool>._(1005),
+  needBetaMigration<bool>._(1006),
+  // TODO: Remove this after patching open-api
+  shouldResetSync<bool>._(1007);
 
   const StoreKey._(this.id);
   final int id;
   Type get type => T;
 }
 
-class StoreUpdateEvent<T> {
+class StoreDto<T> {
   final StoreKey<T> key;
   final T? value;
 
-  const StoreUpdateEvent(this.key, this.value);
+  const StoreDto(this.key, this.value);
 
   @override
   String toString() {
     return '''
-StoreUpdateEvent: {
+StoreDto: {
   key: $key,
   value: ${value ?? '<NA>'},
 }''';
   }
 
   @override
-  bool operator ==(covariant StoreUpdateEvent<T> other) {
+  bool operator ==(covariant StoreDto<T> other) {
     if (identical(this, other)) return true;
 
     return other.key == key && other.value == value;

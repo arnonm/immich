@@ -58,7 +58,7 @@ export interface EnvData {
   database: {
     config: DatabaseConnectionParams;
     skipMigrations: boolean;
-    vectorExtension: VectorExtension;
+    vectorExtension?: VectorExtension;
   };
 
   licensePublicKey: {
@@ -85,9 +85,14 @@ export interface EnvData {
       root: string;
       indexHtml: string;
     };
+    corePlugin: string;
   };
 
   redis: RedisOptions;
+
+  setup: {
+    allow: boolean;
+  };
 
   telemetry: {
     apiPort: number;
@@ -97,9 +102,17 @@ export interface EnvData {
 
   storage: {
     ignoreMountCheckErrors: boolean;
+    mediaLocation?: string;
   };
 
   workers: ImmichWorker[];
+
+  plugins: {
+    external: {
+      allow: boolean;
+      installFolder?: string;
+    };
+  };
 
   noColor: boolean;
   nodeVersion?: string;
@@ -131,12 +144,14 @@ const getEnv = (): EnvData => {
   const dto = plainToInstance(EnvDto, process.env);
   const errors = validateSync(dto);
   if (errors.length > 0) {
-    throw new Error(
-      `Invalid environment variables: ${errors.map((error) => `${error.property}=${error.value}`).join(', ')}`,
-    );
+    const messages = [`Invalid environment variables: `];
+    for (const error of errors) {
+      messages.push(`  - ${error.property}=${error.value} (${Object.values(error.constraints || {}).join(', ')})`);
+    }
+    throw new Error(messages.join('\n'));
   }
 
-  const includedWorkers = asSet(dto.IMMICH_WORKERS_INCLUDE, [ImmichWorker.API, ImmichWorker.MICROSERVICES]);
+  const includedWorkers = asSet(dto.IMMICH_WORKERS_INCLUDE, [ImmichWorker.Api, ImmichWorker.Microservices]);
   const excludedWorkers = asSet(dto.IMMICH_WORKERS_EXCLUDE, []);
   const workers = [...setDifference(includedWorkers, excludedWorkers)];
   for (const worker of workers) {
@@ -145,8 +160,8 @@ const getEnv = (): EnvData => {
     }
   }
 
-  const environment = dto.IMMICH_ENV || ImmichEnvironment.PRODUCTION;
-  const isProd = environment === ImmichEnvironment.PRODUCTION;
+  const environment = dto.IMMICH_ENV || ImmichEnvironment.Production;
+  const isProd = environment === ImmichEnvironment.Production;
   const buildFolder = dto.IMMICH_BUILD_DATA || '/build';
   const folders = {
     geodata: join(buildFolder, 'geodata'),
@@ -196,6 +211,22 @@ const getEnv = (): EnvData => {
         ssl: dto.DB_SSL_MODE || undefined,
       };
 
+  let vectorExtension: VectorExtension | undefined;
+  switch (dto.DB_VECTOR_EXTENSION) {
+    case 'pgvector': {
+      vectorExtension = DatabaseExtension.Vector;
+      break;
+    }
+    case 'pgvecto.rs': {
+      vectorExtension = DatabaseExtension.Vectors;
+      break;
+    }
+    case 'vectorchord': {
+      vectorExtension = DatabaseExtension.VectorChord;
+      break;
+    }
+  }
+
   return {
     host: dto.IMMICH_HOST,
     port: dto.IMMICH_PORT || 2283,
@@ -224,7 +255,7 @@ const getEnv = (): EnvData => {
         prefix: 'immich_bull',
         connection: { ...redisConfig },
         defaultJobOptions: {
-          attempts: 3,
+          attempts: 1,
           removeOnComplete: true,
           removeOnFail: false,
         },
@@ -238,11 +269,11 @@ const getEnv = (): EnvData => {
           mount: true,
           generateId: true,
           setup: (cls, req: Request, res: Response) => {
-            const headerValues = req.headers[ImmichHeader.CID];
+            const headerValues = req.headers[ImmichHeader.Cid];
             const headerValue = Array.isArray(headerValues) ? headerValues[0] : headerValues;
             const cid = headerValue || cls.get(CLS_ID);
             cls.set(CLS_ID, cid);
-            res.header(ImmichHeader.CID, cid);
+            res.header(ImmichHeader.Cid, cid);
           },
         },
       },
@@ -251,7 +282,7 @@ const getEnv = (): EnvData => {
     database: {
       config: databaseConnection,
       skipMigrations: dto.DB_SKIP_MIGRATIONS ?? false,
-      vectorExtension: dto.DB_VECTOR_EXTENSION === 'pgvector' ? DatabaseExtension.VECTOR : DatabaseExtension.VECTORS,
+      vectorExtension,
     },
 
     licensePublicKey: isProd ? productionKeys : stagingKeys,
@@ -262,9 +293,9 @@ const getEnv = (): EnvData => {
 
     otel: {
       metrics: {
-        hostMetrics: telemetries.has(ImmichTelemetry.HOST),
+        hostMetrics: telemetries.has(ImmichTelemetry.Host),
         apiMetrics: {
-          enable: telemetries.has(ImmichTelemetry.API),
+          enable: telemetries.has(ImmichTelemetry.Api),
           ignoreRoutes: excludePaths,
         },
       },
@@ -285,10 +316,16 @@ const getEnv = (): EnvData => {
         root: folders.web,
         indexHtml: join(folders.web, 'index.html'),
       },
+      corePlugin: join(buildFolder, 'corePlugin'),
+    },
+
+    setup: {
+      allow: dto.IMMICH_ALLOW_SETUP ?? true,
     },
 
     storage: {
       ignoreMountCheckErrors: !!dto.IMMICH_IGNORE_MOUNT_CHECK_ERRORS,
+      mediaLocation: dto.IMMICH_MEDIA_LOCATION,
     },
 
     telemetry: {
@@ -298,6 +335,13 @@ const getEnv = (): EnvData => {
     },
 
     workers,
+
+    plugins: {
+      external: {
+        allow: dto.IMMICH_ALLOW_EXTERNAL_PLUGINS ?? false,
+        installFolder: dto.IMMICH_PLUGINS_INSTALL_FOLDER,
+      },
+    },
 
     noColor: !!dto.NO_COLOR,
   };
@@ -316,6 +360,10 @@ export class ConfigRepository {
     }
 
     return cached;
+  }
+
+  isDev() {
+    return this.getEnv().environment === ImmichEnvironment.Development;
   }
 
   getWorker() {

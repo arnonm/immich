@@ -16,7 +16,12 @@ class UsersApi {
 
   final ApiClient apiClient;
 
-  /// Performs an HTTP 'POST /users/profile-image' operation and returns the [Response].
+  /// Create user profile image
+  ///
+  /// Upload and set a new profile image for the current user.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [MultipartFile] file (required):
@@ -55,6 +60,10 @@ class UsersApi {
     );
   }
 
+  /// Create user profile image
+  ///
+  /// Upload and set a new profile image for the current user.
+  ///
   /// Parameters:
   ///
   /// * [MultipartFile] file (required):
@@ -73,7 +82,11 @@ class UsersApi {
     return null;
   }
 
-  /// Performs an HTTP 'DELETE /users/profile-image' operation and returns the [Response].
+  /// Delete user profile image
+  ///
+  /// Delete the profile image of the current user.
+  ///
+  /// Note: This method returns the HTTP [Response].
   Future<Response> deleteProfileImageWithHttpInfo() async {
     // ignore: prefer_const_declarations
     final apiPath = r'/users/profile-image';
@@ -99,6 +112,9 @@ class UsersApi {
     );
   }
 
+  /// Delete user profile image
+  ///
+  /// Delete the profile image of the current user.
   Future<void> deleteProfileImage() async {
     final response = await deleteProfileImageWithHttpInfo();
     if (response.statusCode >= HttpStatus.badRequest) {
@@ -106,7 +122,11 @@ class UsersApi {
     }
   }
 
-  /// Performs an HTTP 'DELETE /users/me/license' operation and returns the [Response].
+  /// Delete user product key
+  ///
+  /// Delete the registered product key for the current user.
+  ///
+  /// Note: This method returns the HTTP [Response].
   Future<Response> deleteUserLicenseWithHttpInfo() async {
     // ignore: prefer_const_declarations
     final apiPath = r'/users/me/license';
@@ -132,6 +152,9 @@ class UsersApi {
     );
   }
 
+  /// Delete user product key
+  ///
+  /// Delete the registered product key for the current user.
   Future<void> deleteUserLicense() async {
     final response = await deleteUserLicenseWithHttpInfo();
     if (response.statusCode >= HttpStatus.badRequest) {
@@ -139,7 +162,51 @@ class UsersApi {
     }
   }
 
-  /// Performs an HTTP 'GET /users/me/preferences' operation and returns the [Response].
+  /// Delete user onboarding
+  ///
+  /// Delete the onboarding status of the current user.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  Future<Response> deleteUserOnboardingWithHttpInfo() async {
+    // ignore: prefer_const_declarations
+    final apiPath = r'/users/me/onboarding';
+
+    // ignore: prefer_final_locals
+    Object? postBody;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+    const contentTypes = <String>[];
+
+
+    return apiClient.invokeAPI(
+      apiPath,
+      'DELETE',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+    );
+  }
+
+  /// Delete user onboarding
+  ///
+  /// Delete the onboarding status of the current user.
+  Future<void> deleteUserOnboarding() async {
+    final response = await deleteUserOnboardingWithHttpInfo();
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+  }
+
+  /// Get my preferences
+  ///
+  /// Retrieve the preferences for the current user.
+  ///
+  /// Note: This method returns the HTTP [Response].
   Future<Response> getMyPreferencesWithHttpInfo() async {
     // ignore: prefer_const_declarations
     final apiPath = r'/users/me/preferences';
@@ -165,6 +232,9 @@ class UsersApi {
     );
   }
 
+  /// Get my preferences
+  ///
+  /// Retrieve the preferences for the current user.
   Future<UserPreferencesResponseDto?> getMyPreferences() async {
     final response = await getMyPreferencesWithHttpInfo();
     if (response.statusCode >= HttpStatus.badRequest) {
@@ -180,7 +250,11 @@ class UsersApi {
     return null;
   }
 
-  /// Performs an HTTP 'GET /users/me' operation and returns the [Response].
+  /// Get current user
+  ///
+  /// Retrieve information about the user making the API request.
+  ///
+  /// Note: This method returns the HTTP [Response].
   Future<Response> getMyUserWithHttpInfo() async {
     // ignore: prefer_const_declarations
     final apiPath = r'/users/me';
@@ -206,6 +280,9 @@ class UsersApi {
     );
   }
 
+  /// Get current user
+  ///
+  /// Retrieve information about the user making the API request.
   Future<UserAdminResponseDto?> getMyUser() async {
     final response = await getMyUserWithHttpInfo();
     if (response.statusCode >= HttpStatus.badRequest) {
@@ -221,7 +298,12 @@ class UsersApi {
     return null;
   }
 
-  /// Performs an HTTP 'GET /users/{id}/profile-image' operation and returns the [Response].
+  /// Retrieve user profile image
+  ///
+  /// Retrieve the profile image file for a user.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -251,6 +333,10 @@ class UsersApi {
     );
   }
 
+  /// Retrieve user profile image
+  ///
+  /// Retrieve the profile image file for a user.
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -269,7 +355,12 @@ class UsersApi {
     return null;
   }
 
-  /// Performs an HTTP 'GET /users/{id}' operation and returns the [Response].
+  /// Retrieve a user
+  ///
+  /// Retrieve a specific user by their ID.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -299,6 +390,10 @@ class UsersApi {
     );
   }
 
+  /// Retrieve a user
+  ///
+  /// Retrieve a specific user by their ID.
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -317,7 +412,11 @@ class UsersApi {
     return null;
   }
 
-  /// Performs an HTTP 'GET /users/me/license' operation and returns the [Response].
+  /// Retrieve user product key
+  ///
+  /// Retrieve information about whether the current user has a registered product key.
+  ///
+  /// Note: This method returns the HTTP [Response].
   Future<Response> getUserLicenseWithHttpInfo() async {
     // ignore: prefer_const_declarations
     final apiPath = r'/users/me/license';
@@ -343,6 +442,9 @@ class UsersApi {
     );
   }
 
+  /// Retrieve user product key
+  ///
+  /// Retrieve information about whether the current user has a registered product key.
   Future<LicenseResponseDto?> getUserLicense() async {
     final response = await getUserLicenseWithHttpInfo();
     if (response.statusCode >= HttpStatus.badRequest) {
@@ -358,7 +460,59 @@ class UsersApi {
     return null;
   }
 
-  /// Performs an HTTP 'GET /users' operation and returns the [Response].
+  /// Retrieve user onboarding
+  ///
+  /// Retrieve the onboarding status of the current user.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  Future<Response> getUserOnboardingWithHttpInfo() async {
+    // ignore: prefer_const_declarations
+    final apiPath = r'/users/me/onboarding';
+
+    // ignore: prefer_final_locals
+    Object? postBody;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+    const contentTypes = <String>[];
+
+
+    return apiClient.invokeAPI(
+      apiPath,
+      'GET',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+    );
+  }
+
+  /// Retrieve user onboarding
+  ///
+  /// Retrieve the onboarding status of the current user.
+  Future<OnboardingResponseDto?> getUserOnboarding() async {
+    final response = await getUserOnboardingWithHttpInfo();
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+    // When a remote server returns no body with a status of 204, we shall not decode it.
+    // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
+    // FormatException when trying to decode an empty string.
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'OnboardingResponseDto',) as OnboardingResponseDto;
+    
+    }
+    return null;
+  }
+
+  /// Get all users
+  ///
+  /// Retrieve a list of all users on the server.
+  ///
+  /// Note: This method returns the HTTP [Response].
   Future<Response> searchUsersWithHttpInfo() async {
     // ignore: prefer_const_declarations
     final apiPath = r'/users';
@@ -384,6 +538,9 @@ class UsersApi {
     );
   }
 
+  /// Get all users
+  ///
+  /// Retrieve a list of all users on the server.
   Future<List<UserResponseDto>?> searchUsers() async {
     final response = await searchUsersWithHttpInfo();
     if (response.statusCode >= HttpStatus.badRequest) {
@@ -402,7 +559,12 @@ class UsersApi {
     return null;
   }
 
-  /// Performs an HTTP 'PUT /users/me/license' operation and returns the [Response].
+  /// Set user product key
+  ///
+  /// Register a product key for the current user.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [LicenseKeyDto] licenseKeyDto (required):
@@ -431,6 +593,10 @@ class UsersApi {
     );
   }
 
+  /// Set user product key
+  ///
+  /// Register a product key for the current user.
+  ///
   /// Parameters:
   ///
   /// * [LicenseKeyDto] licenseKeyDto (required):
@@ -449,7 +615,68 @@ class UsersApi {
     return null;
   }
 
-  /// Performs an HTTP 'PUT /users/me/preferences' operation and returns the [Response].
+  /// Update user onboarding
+  ///
+  /// Update the onboarding status of the current user.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
+  /// Parameters:
+  ///
+  /// * [OnboardingDto] onboardingDto (required):
+  Future<Response> setUserOnboardingWithHttpInfo(OnboardingDto onboardingDto,) async {
+    // ignore: prefer_const_declarations
+    final apiPath = r'/users/me/onboarding';
+
+    // ignore: prefer_final_locals
+    Object? postBody = onboardingDto;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+    const contentTypes = <String>['application/json'];
+
+
+    return apiClient.invokeAPI(
+      apiPath,
+      'PUT',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+    );
+  }
+
+  /// Update user onboarding
+  ///
+  /// Update the onboarding status of the current user.
+  ///
+  /// Parameters:
+  ///
+  /// * [OnboardingDto] onboardingDto (required):
+  Future<OnboardingResponseDto?> setUserOnboarding(OnboardingDto onboardingDto,) async {
+    final response = await setUserOnboardingWithHttpInfo(onboardingDto,);
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+    // When a remote server returns no body with a status of 204, we shall not decode it.
+    // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
+    // FormatException when trying to decode an empty string.
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'OnboardingResponseDto',) as OnboardingResponseDto;
+    
+    }
+    return null;
+  }
+
+  /// Update my preferences
+  ///
+  /// Update the preferences of the current user.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [UserPreferencesUpdateDto] userPreferencesUpdateDto (required):
@@ -478,6 +705,10 @@ class UsersApi {
     );
   }
 
+  /// Update my preferences
+  ///
+  /// Update the preferences of the current user.
+  ///
   /// Parameters:
   ///
   /// * [UserPreferencesUpdateDto] userPreferencesUpdateDto (required):
@@ -496,7 +727,12 @@ class UsersApi {
     return null;
   }
 
-  /// Performs an HTTP 'PUT /users/me' operation and returns the [Response].
+  /// Update current user
+  ///
+  /// Update the current user making teh API request.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [UserUpdateMeDto] userUpdateMeDto (required):
@@ -525,6 +761,10 @@ class UsersApi {
     );
   }
 
+  /// Update current user
+  ///
+  /// Update the current user making teh API request.
+  ///
   /// Parameters:
   ///
   /// * [UserUpdateMeDto] userUpdateMeDto (required):

@@ -1,11 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsEnum, IsInt, IsObject, IsPositive, ValidateNested } from 'class-validator';
+import { IsInt, IsObject, IsPositive, ValidateNested } from 'class-validator';
 import { Memory } from 'src/database';
 import { AssetResponseDto, mapAsset } from 'src/dtos/asset-response.dto';
 import { AuthDto } from 'src/dtos/auth.dto';
-import { MemoryType } from 'src/enum';
-import { Optional, ValidateBoolean, ValidateDate, ValidateUUID } from 'src/validation';
+import { AssetOrderWithRandom, MemoryType } from 'src/enum';
+import { Optional, ValidateBoolean, ValidateDate, ValidateEnum, ValidateUUID } from 'src/validation';
 
 class MemoryBaseDto {
   @ValidateBoolean({ optional: true })
@@ -16,9 +16,7 @@ class MemoryBaseDto {
 }
 
 export class MemorySearchDto {
-  @Optional()
-  @IsEnum(MemoryType)
-  @ApiProperty({ enum: MemoryType, enumName: 'MemoryType' })
+  @ValidateEnum({ enum: MemoryType, name: 'MemoryType', optional: true })
   type?: MemoryType;
 
   @ValidateDate({ optional: true })
@@ -29,6 +27,16 @@ export class MemorySearchDto {
 
   @ValidateBoolean({ optional: true })
   isSaved?: boolean;
+
+  @IsInt()
+  @IsPositive()
+  @Type(() => Number)
+  @Optional()
+  @ApiProperty({ type: 'integer', description: 'Number of memories to return' })
+  size?: number;
+
+  @ValidateEnum({ enum: AssetOrderWithRandom, name: 'MemorySearchOrder', optional: true })
+  order?: AssetOrderWithRandom;
 }
 
 class OnThisDayDto {
@@ -45,15 +53,14 @@ export class MemoryUpdateDto extends MemoryBaseDto {
 }
 
 export class MemoryCreateDto extends MemoryBaseDto {
-  @IsEnum(MemoryType)
-  @ApiProperty({ enum: MemoryType, enumName: 'MemoryType' })
+  @ValidateEnum({ enum: MemoryType, name: 'MemoryType' })
   type!: MemoryType;
 
   @IsObject()
   @ValidateNested()
   @Type((options) => {
     switch (options?.object.type) {
-      case MemoryType.ON_THIS_DAY: {
+      case MemoryType.OnThisDay: {
         return OnThisDayDto;
       }
 
@@ -71,6 +78,11 @@ export class MemoryCreateDto extends MemoryBaseDto {
   assetIds?: string[];
 }
 
+export class MemoryStatisticsResponseDto {
+  @ApiProperty({ type: 'integer' })
+  total!: number;
+}
+
 export class MemoryResponseDto {
   id!: string;
   createdAt!: Date;
@@ -81,7 +93,7 @@ export class MemoryResponseDto {
   showAt?: Date;
   hideAt?: Date;
   ownerId!: string;
-  @ApiProperty({ enumName: 'MemoryType', enum: MemoryType })
+  @ValidateEnum({ enum: MemoryType, name: 'MemoryType' })
   type!: MemoryType;
   data!: MemoryData;
   isSaved!: boolean;

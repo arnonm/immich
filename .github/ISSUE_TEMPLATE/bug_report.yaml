@@ -6,7 +6,6 @@ body:
       label: I have searched the existing issues, both open and closed, to make sure this is not a duplicate report.
       options:
         - label: 'Yes'
-          required: true
 
   - type: markdown
     attributes:
@@ -64,6 +63,11 @@ body:
         - label: Server
         - label: Web
         - label: Mobile
+
+  - type: input
+    attributes:
+      label: Device make and model
+      placeholder: Samsung S25 Android 16
 
   - type: textarea
     validations:

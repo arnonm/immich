@@ -23,6 +23,7 @@ class BoundingBox(TypedDict):
 class ModelTask(StrEnum):
     FACIAL_RECOGNITION = "facial-recognition"
     SEARCH = "clip"
+    OCR = "ocr"
 
 
 class ModelType(StrEnum):
@@ -42,6 +43,12 @@ class ModelSource(StrEnum):
     INSIGHTFACE = "insightface"
     MCLIP = "mclip"
     OPENCLIP = "openclip"
+    PADDLE = "paddle"
+
+
+class ModelPrecision(StrEnum):
+    FP16 = "FP16"
+    FP32 = "FP32"
 
 
 ModelIdentity = tuple[ModelType, ModelTask]
@@ -110,10 +117,6 @@ InferenceResponse = dict[ModelTask | Literal["imageHeight"] | Literal["imageWidt
 
 def has_profiling(obj: Any) -> TypeGuard[HasProfiling]:
     return hasattr(obj, "profiling") and isinstance(obj.profiling, dict)
-
-
-def is_ndarray(obj: Any, dtype: "type[np._DTypeScalar_co]") -> "TypeGuard[npt.NDArray[np._DTypeScalar_co]]":
-    return isinstance(obj, np.ndarray) and obj.dtype == dtype
 
 
 T = TypeVar("T")

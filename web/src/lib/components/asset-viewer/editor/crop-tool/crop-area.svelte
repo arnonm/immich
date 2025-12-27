@@ -12,6 +12,7 @@
     resetGlobalCropStore,
     rotateDegrees,
   } from '$lib/stores/asset-editor.store';
+  import { toTimelineAsset } from '$lib/utils/timeline-util';
   import type { AssetResponseDto } from '@immich/sdk';
   import { animateCropChange, recalculateCrop } from './crop-settings';
   import { cropAreaEl, cropFrame, imgElement, isResizingOrDragging, overlayEl, resetCropStore } from './crop-store';
@@ -52,12 +53,10 @@
 
     img.src = getAssetOriginalUrl({ id: asset.id, cacheKey: asset.thumbhash });
 
-    img.addEventListener('load', () => onImageLoad(true));
-    img.addEventListener('error', (error) => {
-      handleError(error, $t('error_loading_image'));
-    });
+    img.addEventListener('load', () => onImageLoad(true), { passive: true });
+    img.addEventListener('error', (error) => handleError(error, $t('error_loading_image')), { passive: true });
 
-    globalThis.addEventListener('mousemove', handleMouseMove);
+    globalThis.addEventListener('mousemove', handleMouseMove, { passive: true });
   });
 
   onDestroy(() => {
@@ -81,7 +80,7 @@
     aria-label="Crop area"
     type="button"
   >
-    <img draggable="false" src={img?.src} alt={$getAltText(asset)} />
+    <img draggable="false" src={img?.src} alt={$getAltText(toTimelineAsset(asset))} />
     <div class={`${$isResizingOrDragging ? 'resizing' : ''} crop-frame`} bind:this={$cropFrame}>
       <div class="grid"></div>
       <div class="corner top-left"></div>

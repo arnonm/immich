@@ -6,7 +6,7 @@ import { IncomingHttpHeaders } from 'node:http';
 import { join } from 'node:path';
 import { LOGIN_URL, MOBILE_REDIRECT, SALT_ROUNDS } from 'src/constants';
 import { StorageCore } from 'src/cores/storage.core';
-import { UserAdmin } from 'src/database';
+import { AuthSharedLink, AuthUser, UserAdmin } from 'src/database';
 import {
   AuthDto,
   AuthStatusResponseDto,
@@ -18,6 +18,7 @@ import {
   PinCodeChangeDto,
   PinCodeResetDto,
   PinCodeSetupDto,
+  SessionUnlockDto,
   SignUpDto,
   mapLoginResponse,
 } from 'src/dtos/auth.dto';
@@ -28,11 +29,13 @@ import { BaseService } from 'src/services/base.service';
 import { isGranted } from 'src/utils/access';
 import { HumanReadableSize } from 'src/utils/bytes';
 import { mimeTypes } from 'src/utils/mime-types';
+import { getUserAgentDetails } from 'src/utils/request';
 export interface LoginDetails {
   isSecure: boolean;
   clientIp: string;
   deviceType: string;
   deviceOS: string;
+  appVersion: string | null;
 }
 
 interface ClaimOptions<T> {
@@ -47,7 +50,8 @@ export type ValidateRequest = {
   metadata: {
     sharedLinkRoute: boolean;
     adminRoute: boolean;
-    permission?: Permission;
+    /** `false` explicitly means no permission is required, which otherwise defaults to `all` */
+    permission?: Permission | false;
     uri: string;
   };
 };
@@ -79,7 +83,7 @@ export class AuthService extends BaseService {
   async logout(auth: AuthDto, authType: AuthType): Promise<LogoutResponseDto> {
     if (auth.session) {
       await this.sessionRepository.delete(auth.session.id);
-      await this.eventRepository.emit('session.delete', { sessionId: auth.session.id });
+      await this.eventRepository.emit('SessionDelete', { sessionId: auth.session.id });
     }
 
     return {
@@ -90,11 +94,7 @@ export class AuthService extends BaseService {
 
   async changePassword(auth: AuthDto, dto: ChangePasswordDto): Promise<UserAdminResponseDto> {
     const { password, newPassword } = dto;
-    const user = await this.userRepository.getByEmail(auth.user.email, { withPassword: true });
-    if (!user) {
-      throw new UnauthorizedException();
-    }
-
+    const user = await this.userRepository.getForChangePassword(auth.user.id);
     const valid = this.validateSecret(password, user.password);
     if (!valid) {
       throw new BadRequestException('Wrong password');
@@ -103,6 +103,12 @@ export class AuthService extends BaseService {
     const hashedPassword = await this.cryptoRepository.hashBcrypt(newPassword, SALT_ROUNDS);
 
     const updatedUser = await this.userRepository.update(user.id, { password: hashedPassword });
+
+    await this.eventRepository.emit('AuthChangePassword', {
+      userId: user.id,
+      currentSessionId: auth.session?.id,
+      invalidateSessions: dto.invalidateSessions,
+    });
 
     return mapUserAdmin(updatedUser);
   }
@@ -123,20 +129,21 @@ export class AuthService extends BaseService {
 
   async resetPinCode(auth: AuthDto, dto: PinCodeResetDto) {
     const user = await this.userRepository.getForPinCode(auth.user.id);
-    this.resetPinChecks(user, dto);
+    this.validatePinCode(user, dto);
 
     await this.userRepository.update(auth.user.id, { pinCode: null });
+    await this.sessionRepository.lockAll(auth.user.id);
   }
 
   async changePinCode(auth: AuthDto, dto: PinCodeChangeDto) {
     const user = await this.userRepository.getForPinCode(auth.user.id);
-    this.resetPinChecks(user, dto);
+    this.validatePinCode(user, dto);
 
     const hashed = await this.cryptoRepository.hashBcrypt(dto.newPinCode, SALT_ROUNDS);
     await this.userRepository.update(auth.user.id, { pinCode: hashed });
   }
 
-  private resetPinChecks(
+  private validatePinCode(
     user: { pinCode: string | null; password: string | null },
     dto: { pinCode?: string; password?: string },
   ) {
@@ -158,6 +165,11 @@ export class AuthService extends BaseService {
   }
 
   async adminSignUp(dto: SignUpDto): Promise<UserAdminResponseDto> {
+    const { setup } = this.configRepository.getEnv();
+    if (!setup.allow) {
+      throw new BadRequestException('Admin setup is disabled');
+    }
+
     const adminUser = await this.userRepository.getAdmin();
     if (adminUser) {
       throw new BadRequestException('The server already has an admin');
@@ -176,7 +188,8 @@ export class AuthService extends BaseService {
 
   async authenticate({ headers, queryParams, metadata }: ValidateRequest): Promise<AuthDto> {
     const authDto = await this.validate({ headers, queryParams });
-    const { adminRoute, sharedLinkRoute, permission, uri } = metadata;
+    const { adminRoute, sharedLinkRoute, uri } = metadata;
+    const requestedPermission = metadata.permission ?? Permission.All;
 
     if (!authDto.user.isAdmin && adminRoute) {
       this.logger.warn(`Denied access to admin only route: ${uri}`);
@@ -188,28 +201,37 @@ export class AuthService extends BaseService {
       throw new ForbiddenException('Forbidden');
     }
 
-    if (authDto.apiKey && permission && !isGranted({ requested: [permission], current: authDto.apiKey.permissions })) {
-      throw new ForbiddenException(`Missing required permission: ${permission}`);
+    if (
+      authDto.apiKey &&
+      requestedPermission !== false &&
+      !isGranted({ requested: [requestedPermission], current: authDto.apiKey.permissions })
+    ) {
+      throw new ForbiddenException(`Missing required permission: ${requestedPermission}`);
     }
 
     return authDto;
   }
 
   private async validate({ headers, queryParams }: Omit<ValidateRequest, 'metadata'>): Promise<AuthDto> {
-    const shareKey = (headers[ImmichHeader.SHARED_LINK_KEY] || queryParams[ImmichQuery.SHARED_LINK_KEY]) as string;
-    const session = (headers[ImmichHeader.USER_TOKEN] ||
-      headers[ImmichHeader.SESSION_TOKEN] ||
-      queryParams[ImmichQuery.SESSION_KEY] ||
+    const shareKey = (headers[ImmichHeader.SharedLinkKey] || queryParams[ImmichQuery.SharedLinkKey]) as string;
+    const shareSlug = (headers[ImmichHeader.SharedLinkSlug] || queryParams[ImmichQuery.SharedLinkSlug]) as string;
+    const session = (headers[ImmichHeader.UserToken] ||
+      headers[ImmichHeader.SessionToken] ||
+      queryParams[ImmichQuery.SessionKey] ||
       this.getBearerToken(headers) ||
       this.getCookieToken(headers)) as string;
-    const apiKey = (headers[ImmichHeader.API_KEY] || queryParams[ImmichQuery.API_KEY]) as string;
+    const apiKey = (headers[ImmichHeader.ApiKey] || queryParams[ImmichQuery.ApiKey]) as string;
 
     if (shareKey) {
-      return this.validateSharedLink(shareKey);
+      return this.validateSharedLinkKey(shareKey);
+    }
+
+    if (shareSlug) {
+      return this.validateSharedLinkSlug(shareSlug);
     }
 
     if (session) {
-      return this.validateSession(session);
+      return this.validateSession(session, headers);
     }
 
     if (apiKey) {
@@ -252,7 +274,7 @@ export class AuthService extends BaseService {
     const { oauth } = await this.getConfig({ withCache: false });
     const url = this.resolveRedirectUri(oauth, dto.url);
     const profile = await this.oauthRepository.getProfile(oauth, url, expectedState, codeVerifier);
-    const { autoRegister, defaultStorageQuota, storageLabelClaim, storageQuotaClaim } = oauth;
+    const { autoRegister, defaultStorageQuota, storageLabelClaim, storageQuotaClaim, roleClaim } = oauth;
     this.logger.debug(`Logging in with OAuth: ${JSON.stringify(profile)}`);
     let user: UserAdmin | undefined = await this.userRepository.getByOAuthId(profile.sub);
 
@@ -292,14 +314,20 @@ export class AuthService extends BaseService {
         default: defaultStorageQuota,
         isValid: (value: unknown) => Number(value) >= 0,
       });
+      const role = this.getClaim<'admin' | 'user'>(profile, {
+        key: roleClaim,
+        default: 'user',
+        isValid: (value: unknown) => isString(value) && ['admin', 'user'].includes(value),
+      });
 
       const userName = profile.name ?? `${profile.given_name || ''} ${profile.family_name || ''}`;
       user = await this.createUser({
         name: userName,
         email: profile.email,
         oauthId: profile.sub,
-        quotaSizeInBytes: storageQuota * HumanReadableSize.GiB || null,
+        quotaSizeInBytes: storageQuota === null ? null : storageQuota * HumanReadableSize.GiB,
         storageLabel: storageLabel || null,
+        isAdmin: role === 'admin',
       });
     }
 
@@ -317,7 +345,7 @@ export class AuthService extends BaseService {
       const { contentType, data } = await this.oauthRepository.getProfilePicture(url);
       const extensionWithDot = mimeTypes.toExtension(contentType || 'image/jpeg') ?? 'jpg';
       const profileImagePath = join(
-        StorageCore.getFolderLocation(StorageFolder.PROFILE, user.id),
+        StorageCore.getFolderLocation(StorageFolder.Profile, user.id),
         `${this.cryptoRepository.randomUUID()}${extensionWithDot}`,
       );
 
@@ -326,10 +354,10 @@ export class AuthService extends BaseService {
       await this.userRepository.update(user.id, { profileImagePath, profileChangedAt: new Date() });
 
       if (oldPath) {
-        await this.jobRepository.queue({ name: JobName.DELETE_FILES, data: { files: [oldPath] } });
+        await this.jobRepository.queue({ name: JobName.FileDelete, data: { files: [oldPath] } });
       }
     } catch (error: Error | any) {
-      this.logger.warn(`Unable to sync oauth profile picture: ${error}`, error?.stack);
+      this.logger.warn(`Unable to sync oauth profile picture: ${error}\n${error?.stack}`);
     }
   }
 
@@ -362,7 +390,7 @@ export class AuthService extends BaseService {
   }
 
   private async getLogoutEndpoint(authType: AuthType): Promise<string> {
-    if (authType !== AuthType.OAUTH) {
+    if (authType !== AuthType.OAuth) {
       return LOGIN_URL;
     }
 
@@ -385,31 +413,46 @@ export class AuthService extends BaseService {
 
   private getCookieToken(headers: IncomingHttpHeaders): string | null {
     const cookies = parse(headers.cookie || '');
-    return cookies[ImmichCookie.ACCESS_TOKEN] || null;
+    return cookies[ImmichCookie.AccessToken] || null;
   }
 
   private getCookieOauthState(headers: IncomingHttpHeaders): string | null {
     const cookies = parse(headers.cookie || '');
-    return cookies[ImmichCookie.OAUTH_STATE] || null;
+    return cookies[ImmichCookie.OAuthState] || null;
   }
 
   private getCookieCodeVerifier(headers: IncomingHttpHeaders): string | null {
     const cookies = parse(headers.cookie || '');
-    return cookies[ImmichCookie.OAUTH_CODE_VERIFIER] || null;
+    return cookies[ImmichCookie.OAuthCodeVerifier] || null;
   }
 
-  async validateSharedLink(key: string | string[]): Promise<AuthDto> {
+  async validateSharedLinkKey(key: string | string[]): Promise<AuthDto> {
     key = Array.isArray(key) ? key[0] : key;
 
     const bytes = Buffer.from(key, key.length === 100 ? 'hex' : 'base64url');
     const sharedLink = await this.sharedLinkRepository.getByKey(bytes);
-    if (sharedLink?.user && (!sharedLink.expiresAt || new Date(sharedLink.expiresAt) > new Date())) {
-      return {
-        user: sharedLink.user,
-        sharedLink,
-      };
+    if (!this.isValidSharedLink(sharedLink)) {
+      throw new UnauthorizedException('Invalid share key');
     }
-    throw new UnauthorizedException('Invalid share key');
+
+    return { user: sharedLink.user, sharedLink };
+  }
+
+  async validateSharedLinkSlug(slug: string | string[]): Promise<AuthDto> {
+    slug = Array.isArray(slug) ? slug[0] : slug;
+
+    const sharedLink = await this.sharedLinkRepository.getBySlug(slug);
+    if (!this.isValidSharedLink(sharedLink)) {
+      throw new UnauthorizedException('Invalid share slug');
+    }
+
+    return { user: sharedLink.user, sharedLink };
+  }
+
+  private isValidSharedLink(
+    sharedLink?: AuthSharedLink & { user: AuthUser | null },
+  ): sharedLink is AuthSharedLink & { user: AuthUser } {
+    return !!sharedLink?.user && (!sharedLink.expiresAt || new Date(sharedLink.expiresAt) > new Date());
   }
 
   private async validateApiKey(key: string): Promise<AuthDto> {
@@ -433,21 +476,43 @@ export class AuthService extends BaseService {
     return this.cryptoRepository.compareBcrypt(inputSecret, existingHash);
   }
 
-  private async validateSession(tokenValue: string): Promise<AuthDto> {
+  private async validateSession(tokenValue: string, headers: IncomingHttpHeaders): Promise<AuthDto> {
     const hashedToken = this.cryptoRepository.hashSha256(tokenValue);
     const session = await this.sessionRepository.getByToken(hashedToken);
     if (session?.user) {
+      const { appVersion, deviceOS, deviceType } = getUserAgentDetails(headers);
       const now = DateTime.now();
       const updatedAt = DateTime.fromJSDate(session.updatedAt);
       const diff = now.diff(updatedAt, ['hours']);
-      if (diff.hours > 1) {
-        await this.sessionRepository.update(session.id, { id: session.id, updatedAt: new Date() });
+      if (diff.hours > 1 || appVersion != session.appVersion) {
+        await this.sessionRepository.update(session.id, {
+          id: session.id,
+          updatedAt: new Date(),
+          appVersion,
+          deviceOS,
+          deviceType,
+        });
+      }
+
+      // Pin check
+      let hasElevatedPermission = false;
+
+      if (session.pinExpiresAt) {
+        const pinExpiresAt = DateTime.fromJSDate(session.pinExpiresAt);
+        hasElevatedPermission = pinExpiresAt > now;
+
+        if (hasElevatedPermission && now.plus({ minutes: 5 }) > pinExpiresAt) {
+          await this.sessionRepository.update(session.id, {
+            pinExpiresAt: DateTime.now().plus({ minutes: 5 }).toJSDate(),
+          });
+        }
       }
 
       return {
         user: session.user,
         session: {
           id: session.id,
+          hasElevatedPermission,
         },
       };
     }
@@ -455,18 +520,40 @@ export class AuthService extends BaseService {
     throw new UnauthorizedException('Invalid user token');
   }
 
+  async unlockSession(auth: AuthDto, dto: SessionUnlockDto): Promise<void> {
+    if (!auth.session) {
+      throw new BadRequestException('This endpoint can only be used with a session token');
+    }
+
+    const user = await this.userRepository.getForPinCode(auth.user.id);
+    this.validatePinCode(user, { pinCode: dto.pinCode });
+
+    await this.sessionRepository.update(auth.session.id, {
+      pinExpiresAt: DateTime.now().plus({ minutes: 15 }).toJSDate(),
+    });
+  }
+
+  async lockSession(auth: AuthDto): Promise<void> {
+    if (!auth.session) {
+      throw new BadRequestException('This endpoint can only be used with a session token');
+    }
+
+    await this.sessionRepository.update(auth.session.id, { pinExpiresAt: null });
+  }
+
   private async createLoginResponse(user: UserAdmin, loginDetails: LoginDetails) {
-    const key = this.cryptoRepository.newPassword(32);
-    const token = this.cryptoRepository.hashSha256(key);
+    const token = this.cryptoRepository.randomBytesAsText(32);
+    const tokenHashed = this.cryptoRepository.hashSha256(token);
 
     await this.sessionRepository.create({
-      token,
+      token: tokenHashed,
       deviceOS: loginDetails.deviceOS,
       deviceType: loginDetails.deviceType,
+      appVersion: loginDetails.appVersion,
       userId: user.id,
     });
 
-    return mapLoginResponse(user, key);
+    return mapLoginResponse(user, token);
   }
 
   private getClaim<T>(profile: OAuthProfile, options: ClaimOptions<T>): T {
@@ -490,9 +577,14 @@ export class AuthService extends BaseService {
       throw new UnauthorizedException();
     }
 
+    const session = auth.session ? await this.sessionRepository.get(auth.session.id) : undefined;
+
     return {
       pinCode: !!user.pinCode,
       password: !!user.password,
+      isElevated: !!auth.session?.hasElevatedPermission,
+      expiresAt: session?.expiresAt?.toISOString(),
+      pinExpiresAt: session?.pinExpiresAt?.toISOString(),
     };
   }
 }

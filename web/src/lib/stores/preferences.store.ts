@@ -9,9 +9,9 @@ export interface ThemeSetting {
 }
 
 // Locale to use for formatting dates, numbers, etc.
-export const locale = persisted<string | undefined>('locale', undefined, {
+export const locale = persisted<string | undefined>('locale', 'default', {
   serializer: {
-    parse: (text) => (text == '' ? 'en-US' : text),
+    parse: (text) => text || 'default',
     stringify: (object) => object ?? '',
   },
 });
@@ -145,5 +145,9 @@ export const alwaysLoadOriginalFile = persisted<boolean>('always-load-original-f
 export const playVideoThumbnailOnHover = persisted<boolean>('play-video-thumbnail-on-hover', true, {});
 
 export const loopVideo = persisted<boolean>('loop-video', true, {});
+
+export const autoPlayVideo = persisted<boolean>('auto-play-video', true, {});
+
+export const alwaysLoadOriginalVideo = persisted<boolean>('always-load-original-video', false, {});
 
 export const recentAlbumsDropdown = persisted<boolean>('recent-albums-open', true, {});

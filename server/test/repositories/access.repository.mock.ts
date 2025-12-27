@@ -50,6 +50,10 @@ export const newAccessRepositoryMock = (): IAccessRepositoryMock => {
       checkUpdateAccess: vitest.fn().mockResolvedValue(new Set()),
     },
 
+    session: {
+      checkOwnerAccess: vitest.fn().mockResolvedValue(new Set()),
+    },
+
     stack: {
       checkOwnerAccess: vitest.fn().mockResolvedValue(new Set()),
     },
@@ -59,6 +63,10 @@ export const newAccessRepositoryMock = (): IAccessRepositoryMock => {
     },
 
     tag: {
+      checkOwnerAccess: vitest.fn().mockResolvedValue(new Set()),
+    },
+
+    workflow: {
       checkOwnerAccess: vitest.fn().mockResolvedValue(new Set()),
     },
   };

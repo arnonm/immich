@@ -3,39 +3,38 @@
   import { page } from '$app/state';
   import { shortcut } from '$lib/actions/shortcut';
   import AlbumCardGroup from '$lib/components/album-page/album-card-group.svelte';
-  import CircleIconButton from '$lib/components/elements/buttons/circle-icon-button.svelte';
-  import Icon from '$lib/components/elements/icon.svelte';
-  import AddToAlbum from '$lib/components/photos-page/actions/add-to-album.svelte';
-  import ArchiveAction from '$lib/components/photos-page/actions/archive-action.svelte';
-  import AssetJobActions from '$lib/components/photos-page/actions/asset-job-actions.svelte';
-  import ChangeDate from '$lib/components/photos-page/actions/change-date-action.svelte';
-  import ChangeLocation from '$lib/components/photos-page/actions/change-location-action.svelte';
-  import CreateSharedLink from '$lib/components/photos-page/actions/create-shared-link.svelte';
-  import DeleteAssets from '$lib/components/photos-page/actions/delete-assets.svelte';
-  import DownloadAction from '$lib/components/photos-page/actions/download-action.svelte';
-  import FavoriteAction from '$lib/components/photos-page/actions/favorite-action.svelte';
-  import TagAction from '$lib/components/photos-page/actions/tag-action.svelte';
-  import AssetSelectControlBar from '$lib/components/photos-page/asset-select-control-bar.svelte';
   import ButtonContextMenu from '$lib/components/shared-components/context-menu/button-context-menu.svelte';
   import ControlAppBar from '$lib/components/shared-components/control-app-bar.svelte';
   import GalleryViewer from '$lib/components/shared-components/gallery-viewer/gallery-viewer.svelte';
-  import LoadingSpinner from '$lib/components/shared-components/loading-spinner.svelte';
   import SearchBar from '$lib/components/shared-components/search-bar/search-bar.svelte';
+  import AddToAlbum from '$lib/components/timeline/actions/AddToAlbumAction.svelte';
+  import ArchiveAction from '$lib/components/timeline/actions/ArchiveAction.svelte';
+  import AssetJobActions from '$lib/components/timeline/actions/AssetJobActions.svelte';
+  import ChangeDate from '$lib/components/timeline/actions/ChangeDateAction.svelte';
+  import ChangeDescription from '$lib/components/timeline/actions/ChangeDescriptionAction.svelte';
+  import ChangeLocation from '$lib/components/timeline/actions/ChangeLocationAction.svelte';
+  import CreateSharedLink from '$lib/components/timeline/actions/CreateSharedLinkAction.svelte';
+  import DeleteAssets from '$lib/components/timeline/actions/DeleteAssetsAction.svelte';
+  import DownloadAction from '$lib/components/timeline/actions/DownloadAction.svelte';
+  import FavoriteAction from '$lib/components/timeline/actions/FavoriteAction.svelte';
+  import SetVisibilityAction from '$lib/components/timeline/actions/SetVisibilityAction.svelte';
+  import TagAction from '$lib/components/timeline/actions/TagAction.svelte';
+  import AssetSelectControlBar from '$lib/components/timeline/AssetSelectControlBar.svelte';
   import { AppRoute, QueryParameter } from '$lib/constants';
+  import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
+  import type { TimelineAsset, Viewport } from '$lib/managers/timeline-manager/types';
   import { AssetInteraction } from '$lib/stores/asset-interaction.svelte';
   import { assetViewingStore } from '$lib/stores/asset-viewing.store';
-  import type { Viewport } from '$lib/stores/assets-store.svelte';
   import { lang, locale } from '$lib/stores/preferences.store';
-  import { featureFlags } from '$lib/stores/server-config.store';
   import { preferences } from '$lib/stores/user.store';
   import { handlePromiseError } from '$lib/utils';
   import { cancelMultiselect } from '$lib/utils/asset-utils';
   import { parseUtcDate } from '$lib/utils/date-time';
   import { handleError } from '$lib/utils/handle-error';
   import { isAlbumsRoute, isPeopleRoute } from '$lib/utils/navigation';
+  import { toTimelineAsset } from '$lib/utils/timeline-util';
   import {
     type AlbumResponseDto,
-    type AssetResponseDto,
     getPerson,
     getTagById,
     type MetadataSearchDto,
@@ -43,13 +42,14 @@
     searchSmart,
     type SmartSearchDto,
   } from '@immich/sdk';
+  import { Icon, IconButton, LoadingSpinner } from '@immich/ui';
   import { mdiArrowLeft, mdiDotsVertical, mdiImageOffOutline, mdiPlus, mdiSelectAll } from '@mdi/js';
-  import { tick } from 'svelte';
+  import { tick, untrack } from 'svelte';
   import { t } from 'svelte-i18n';
 
-  const MAX_ASSET_COUNT = 5000;
   let { isViewing: showAssetViewer } = assetViewingStore;
   const viewport: Viewport = $state({ width: 0, height: 0 });
+  let searchResultsElement: HTMLElement | undefined = $state();
 
   // The GalleryViewer pushes it's own history state, which causes weird
   // behavior for history.back(). To prevent that we store the previous page
@@ -58,24 +58,23 @@
 
   let nextPage = $state(1);
   let searchResultAlbums: AlbumResponseDto[] = $state([]);
-  let searchResultAssets: AssetResponseDto[] = $state([]);
+  let searchResultAssets: TimelineAsset[] = $state([]);
   let isLoading = $state(true);
   let scrollY = $state(0);
   let scrollYHistory = 0;
 
   const assetInteraction = new AssetInteraction();
 
-  type SearchTerms = MetadataSearchDto & Pick<SmartSearchDto, 'query'>;
+  type SearchTerms = MetadataSearchDto & Pick<SmartSearchDto, 'query' | 'queryAssetId'>;
   let searchQuery = $derived(page.url.searchParams.get(QueryParameter.QUERY));
-  let smartSearchEnabled = $derived($featureFlags.loaded && $featureFlags.smartSearch);
+  let smartSearchEnabled = $derived(featureFlagsManager.value.smartSearch);
   let terms = $derived(searchQuery ? JSON.parse(searchQuery) : {});
 
   $effect(() => {
+    // we want this to *only* be reactive on `terms`
     // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     terms;
-    setTimeout(() => {
-      handlePromiseError(onSearchQueryUpdate());
-    });
+    untrack(() => handlePromiseError(onSearchQueryUpdate()));
   });
 
   const onEscape = () => {
@@ -122,8 +121,14 @@
 
   const onAssetDelete = (assetIds: string[]) => {
     const assetIdSet = new Set(assetIds);
-    searchResultAssets = searchResultAssets.filter((a: AssetResponseDto) => !assetIdSet.has(a.id));
+    searchResultAssets = searchResultAssets.filter((asset: TimelineAsset) => !assetIdSet.has(asset.id));
   };
+
+  const handleSetVisibility = (assetIds: string[]) => {
+    assetInteraction.clearMultiselect();
+    onAssetDelete(assetIds);
+  };
+
   const handleSelectAll = () => {
     assetInteraction.selectAssets(searchResultAssets);
   };
@@ -137,10 +142,7 @@
 
   // eslint-disable-next-line svelte/valid-prop-names-in-kit-pages
   export const loadNextPage = async (force?: boolean) => {
-    if (!nextPage || searchResultAssets.length >= MAX_ASSET_COUNT) {
-      return;
-    }
-    if (isLoading && !force) {
+    if (!nextPage || (isLoading && !force)) {
       return;
     }
     isLoading = true;
@@ -155,12 +157,12 @@
 
     try {
       const { albums, assets } =
-        'query' in searchDto && smartSearchEnabled
+        ('query' in searchDto || 'queryAssetId' in searchDto) && smartSearchEnabled
           ? await searchSmart({ smartSearchDto: searchDto })
           : await searchAssets({ metadataSearchDto: searchDto });
 
       searchResultAlbums.push(...albums.items);
-      searchResultAssets.push(...assets.items);
+      searchResultAssets.push(...assets.items.map((asset) => toTimelineAsset(asset)));
 
       nextPage = Number(assets.nextPage) || 0;
     } catch (error) {
@@ -201,6 +203,8 @@
       tagIds: $t('tags'),
       originalFileName: $t('file_name'),
       description: $t('description'),
+      queryAssetId: $t('query_asset_id'),
+      ocr: $t('ocr'),
     };
     return keyMap[key] || key;
   }
@@ -221,7 +225,10 @@
     return personNames.join(', ');
   }
 
-  async function getTagNames(tagIds: string[]) {
+  async function getTagNames(tagIds: string[] | null) {
+    if (tagIds === null) {
+      return $t('untagged');
+    }
     const tagNames = await Promise.all(
       tagIds.map(async (tagId) => {
         const tag = await getTagById({ id: tagId });
@@ -238,7 +245,7 @@
 
     if (terms.isNotInAlbum.toString() == 'true') {
       const assetIdSet = new Set(assetIds);
-      searchResultAssets = searchResultAssets.filter((a: AssetResponseDto) => !assetIdSet.has(a.id));
+      searchResultAssets = searchResultAssets.filter((asset) => !assetIdSet.has(asset.id));
     }
   };
 
@@ -247,7 +254,8 @@
   }
 </script>
 
-<svelte:window use:shortcut={{ shortcut: { key: 'Escape' }, onShortcut: onEscape }} bind:scrollY />
+<svelte:window bind:scrollY />
+<svelte:document use:shortcut={{ shortcut: { key: 'Escape' }, onShortcut: onEscape }} />
 
 <section>
   {#if assetInteraction.selectionActive}
@@ -257,16 +265,23 @@
         clearSelect={() => cancelMultiselect(assetInteraction)}
       >
         <CreateSharedLink />
-        <CircleIconButton title={$t('select_all')} icon={mdiSelectAll} onclick={handleSelectAll} />
+        <IconButton
+          shape="round"
+          color="secondary"
+          variant="ghost"
+          aria-label={$t('select_all')}
+          icon={mdiSelectAll}
+          onclick={handleSelectAll}
+        />
         <ButtonContextMenu icon={mdiPlus} title={$t('add_to')}>
           <AddToAlbum {onAddToAlbum} />
           <AddToAlbum shared {onAddToAlbum} />
         </ButtonContextMenu>
         <FavoriteAction
           removeFavorite={assetInteraction.isAllFavorite}
-          onFavorite={(ids, isFavorite) => {
-            for (const id of ids) {
-              const asset = searchResultAssets.find((asset) => asset.id === id);
+          onFavorite={(assetIds, isFavorite) => {
+            for (const assetId of assetIds) {
+              const asset = searchResultAssets.find((searchAsset) => searchAsset.id === assetId);
               if (asset) {
                 asset.isFavorite = isFavorite;
               }
@@ -282,7 +297,7 @@
           {#if $preferences.tags.enabled && assetInteraction.isAllUserOwned}
             <TagAction menuItem />
           {/if}
-          <DeleteAssets menuItem {onAssetDelete} />
+          <DeleteAssets menuItem {onAssetDelete} onUndoDelete={onSearchQueryUpdate} />
           <hr />
           <AssetJobActions />
         </ButtonContextMenu>
@@ -305,25 +320,25 @@
     id="search-chips"
     class="mt-24 text-center w-full flex gap-5 place-content-center place-items-center flex-wrap px-24"
   >
-    {#each getObjectKeys(terms) as key (key)}
-      {@const value = terms[key]}
-      <div class="flex place-content-center place-items-center text-xs">
+    {#each getObjectKeys(terms) as searchKey (searchKey)}
+      {@const value = terms[searchKey]}
+      <div class="flex place-content-center place-items-center items-stretch text-xs">
         <div
-          class="bg-immich-primary py-2 px-4 text-white dark:text-black dark:bg-immich-dark-primary
+          class="flex items-center justify-center bg-immich-primary py-2 px-4 text-white dark:text-black dark:bg-immich-dark-primary
           {value === true ? 'rounded-full' : 'rounded-s-full'}"
         >
-          {getHumanReadableSearchKey(key as keyof SearchTerms)}
+          {getHumanReadableSearchKey(searchKey as keyof SearchTerms)}
         </div>
 
         {#if value !== true}
           <div class="bg-gray-300 py-2 px-4 dark:bg-gray-800 dark:text-white rounded-e-full">
-            {#if (key === 'takenAfter' || key === 'takenBefore') && typeof value === 'string'}
+            {#if (searchKey === 'takenAfter' || searchKey === 'takenBefore') && typeof value === 'string'}
               {getHumanReadableDate(value)}
-            {:else if key === 'personIds' && Array.isArray(value)}
+            {:else if searchKey === 'personIds' && Array.isArray(value)}
               {#await getPersonName(value) then personName}
                 {personName}
               {/await}
-            {:else if key === 'tagIds' && Array.isArray(value)}
+            {:else if searchKey === 'tagIds' && (Array.isArray(value) || value === null)}
               {#await getTagNames(value) then tagNames}
                 {tagNames}
               {/await}
@@ -340,17 +355,18 @@
 {/if}
 
 <section
-  class="mb-12 bg-immich-bg dark:bg-immich-dark-bg m-4"
+  class="mb-12 bg-immich-bg dark:bg-immich-dark-bg m-4 max-h-screen"
   bind:clientHeight={viewport.height}
   bind:clientWidth={viewport.width}
+  bind:this={searchResultsElement}
 >
   {#if searchResultAlbums.length > 0}
     <section>
-      <div class="ms-6 text-4xl font-medium text-black/70 dark:text-white/80">{$t('albums').toUpperCase()}</div>
+      <div class="uppercase ms-6 text-4xl font-medium text-black/70 dark:text-white/80">{$t('albums')}</div>
       <AlbumCardGroup albums={searchResultAlbums} showDateRange showItemCount />
 
-      <div class="m-6 text-4xl font-medium text-black/70 dark:text-white/80">
-        {$t('photos_and_videos').toUpperCase()}
+      <div class="uppercase m-6 text-4xl font-medium text-black/70 dark:text-white/80">
+        {$t('photos_and_videos')}
       </div>
     </section>
   {/if}
@@ -362,12 +378,13 @@
         onIntersected={loadNextPage}
         showArchiveIcon={true}
         {viewport}
-        pageHeaderOffset={54}
+        onReload={onSearchQueryUpdate}
+        slidingWindowOffset={searchResultsElement.offsetTop}
       />
     {:else if !isLoading}
-      <div class="flex min-h-[calc(66vh_-_11rem)] w-full place-content-center items-center dark:text-white">
+      <div class="flex min-h-[calc(66vh-11rem)] w-full place-content-center items-center dark:text-white">
         <div class="flex flex-col content-center items-center text-center">
-          <Icon path={mdiImageOffOutline} size="3.5em" />
+          <Icon icon={mdiImageOffOutline} size="3.5em" />
           <p class="mt-5 text-3xl font-medium">{$t('no_results')}</p>
           <p class="text-base font-normal">{$t('no_results_description')}</p>
         </div>
@@ -376,7 +393,69 @@
 
     {#if isLoading}
       <div class="flex justify-center py-16 items-center">
-        <LoadingSpinner size="48" />
+        <LoadingSpinner size="giant" />
+      </div>
+    {/if}
+  </section>
+
+  <section>
+    {#if assetInteraction.selectionActive}
+      <div class="fixed top-0 start-0 w-full">
+        <AssetSelectControlBar
+          assets={assetInteraction.selectedAssets}
+          clearSelect={() => cancelMultiselect(assetInteraction)}
+        >
+          <CreateSharedLink />
+          <IconButton
+            shape="round"
+            color="secondary"
+            variant="ghost"
+            aria-label={$t('select_all')}
+            icon={mdiSelectAll}
+            onclick={handleSelectAll}
+          />
+          <ButtonContextMenu icon={mdiPlus} title={$t('add_to')}>
+            <AddToAlbum {onAddToAlbum} />
+            <AddToAlbum shared {onAddToAlbum} />
+          </ButtonContextMenu>
+          <FavoriteAction
+            removeFavorite={assetInteraction.isAllFavorite}
+            onFavorite={(ids, isFavorite) => {
+              for (const id of ids) {
+                const asset = searchResultAssets.find((asset) => asset.id === id);
+                if (asset) {
+                  asset.isFavorite = isFavorite;
+                }
+              }
+            }}
+          />
+
+          <ButtonContextMenu icon={mdiDotsVertical} title={$t('menu')}>
+            <DownloadAction menuItem />
+            <ChangeDate menuItem />
+            <ChangeDescription menuItem />
+            <ChangeLocation menuItem />
+            <ArchiveAction menuItem unarchive={assetInteraction.isAllArchived} />
+            {#if assetInteraction.isAllUserOwned}
+              <SetVisibilityAction menuItem onVisibilitySet={handleSetVisibility} />
+            {/if}
+            {#if $preferences.tags.enabled && assetInteraction.isAllUserOwned}
+              <TagAction menuItem />
+            {/if}
+            <DeleteAssets menuItem {onAssetDelete} onUndoDelete={onSearchQueryUpdate} />
+            <hr />
+            <AssetJobActions />
+          </ButtonContextMenu>
+        </AssetSelectControlBar>
+      </div>
+    {:else}
+      <div class="fixed top-0 start-0 w-full">
+        <ControlAppBar onClose={() => goto(previousRoute)} backIcon={mdiArrowLeft}>
+          <div class="absolute bg-light"></div>
+          <div class="w-full flex-1 ps-4">
+            <SearchBar grayTheme={false} value={terms?.query ?? ''} searchQuery={terms} />
+          </div>
+        </ControlAppBar>
       </div>
     {/if}
   </section>

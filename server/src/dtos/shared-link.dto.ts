@@ -1,20 +1,24 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEnum, IsString } from 'class-validator';
+import { IsString } from 'class-validator';
 import _ from 'lodash';
 import { SharedLink } from 'src/database';
+import { HistoryBuilder, Property } from 'src/decorators';
 import { AlbumResponseDto, mapAlbumWithoutAssets } from 'src/dtos/album.dto';
 import { AssetResponseDto, mapAsset } from 'src/dtos/asset-response.dto';
 import { SharedLinkType } from 'src/enum';
-import { Optional, ValidateBoolean, ValidateDate, ValidateUUID } from 'src/validation';
+import { Optional, ValidateBoolean, ValidateDate, ValidateEnum, ValidateUUID } from 'src/validation';
 
 export class SharedLinkSearchDto {
   @ValidateUUID({ optional: true })
   albumId?: string;
+
+  @ValidateUUID({ optional: true })
+  @Property({ history: new HistoryBuilder().added('v2.5.0') })
+  id?: string;
 }
 
 export class SharedLinkCreateDto {
-  @IsEnum(SharedLinkType)
-  @ApiProperty({ enum: SharedLinkType, enumName: 'SharedLinkType' })
+  @ValidateEnum({ enum: SharedLinkType, name: 'SharedLinkType' })
   type!: SharedLinkType;
 
   @ValidateUUID({ each: true, optional: true })
@@ -23,13 +27,17 @@ export class SharedLinkCreateDto {
   @ValidateUUID({ optional: true })
   albumId?: string;
 
+  @Optional({ nullable: true, emptyToNull: true })
   @IsString()
-  @Optional()
-  description?: string;
+  description?: string | null;
 
+  @Optional({ nullable: true, emptyToNull: true })
   @IsString()
-  @Optional()
-  password?: string;
+  password?: string | null;
+
+  @Optional({ nullable: true, emptyToNull: true })
+  @IsString()
+  slug?: string | null;
 
   @ValidateDate({ optional: true, nullable: true })
   expiresAt?: Date | null = null;
@@ -45,16 +53,22 @@ export class SharedLinkCreateDto {
 }
 
 export class SharedLinkEditDto {
-  @Optional()
-  description?: string;
+  @Optional({ nullable: true, emptyToNull: true })
+  @IsString()
+  description?: string | null;
 
-  @Optional()
-  password?: string;
+  @Optional({ nullable: true, emptyToNull: true })
+  @IsString()
+  password?: string | null;
+
+  @Optional({ nullable: true, emptyToNull: true })
+  @IsString()
+  slug?: string | null;
 
   @Optional({ nullable: true })
   expiresAt?: Date | null;
 
-  @Optional()
+  @ValidateBoolean({ optional: true })
   allowUpload?: boolean;
 
   @ValidateBoolean({ optional: true })
@@ -90,7 +104,7 @@ export class SharedLinkResponseDto {
   userId!: string;
   key!: string;
 
-  @ApiProperty({ enumName: 'SharedLinkType', enum: SharedLinkType })
+  @ValidateEnum({ enum: SharedLinkType, name: 'SharedLinkType' })
   type!: SharedLinkType;
   createdAt!: Date;
   expiresAt!: Date | null;
@@ -100,6 +114,8 @@ export class SharedLinkResponseDto {
 
   allowDownload!: boolean;
   showMetadata!: boolean;
+
+  slug!: string | null;
 }
 
 export function mapSharedLink(sharedLink: SharedLink): SharedLinkResponseDto {
@@ -119,6 +135,7 @@ export function mapSharedLink(sharedLink: SharedLink): SharedLinkResponseDto {
     allowUpload: sharedLink.allowUpload,
     allowDownload: sharedLink.allowDownload,
     showMetadata: sharedLink.showExif,
+    slug: sharedLink.slug,
   };
 }
 
@@ -142,5 +159,6 @@ export function mapSharedLinkWithoutMetadata(sharedLink: SharedLink): SharedLink
     allowUpload: sharedLink.allowUpload,
     allowDownload: sharedLink.allowDownload,
     showMetadata: sharedLink.showExif,
+    slug: sharedLink.slug,
   };
 }

@@ -1,25 +1,34 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsDateString, IsEnum, IsInt, IsPositive, ValidateNested } from 'class-validator';
-import { UserAvatarColor } from 'src/enum';
+import { IsDateString, IsInt, IsPositive, ValidateNested } from 'class-validator';
+import { AssetOrder, UserAvatarColor } from 'src/enum';
 import { UserPreferences } from 'src/types';
-import { Optional, ValidateBoolean } from 'src/validation';
+import { Optional, ValidateBoolean, ValidateEnum } from 'src/validation';
 
 class AvatarUpdate {
-  @Optional()
-  @IsEnum(UserAvatarColor)
-  @ApiProperty({ enumName: 'UserAvatarColor', enum: UserAvatarColor })
+  @ValidateEnum({ enum: UserAvatarColor, name: 'UserAvatarColor', optional: true })
   color?: UserAvatarColor;
 }
 
 class MemoriesUpdate {
   @ValidateBoolean({ optional: true })
   enabled?: boolean;
+
+  @Optional()
+  @IsInt()
+  @IsPositive()
+  @ApiProperty({ type: 'integer' })
+  duration?: number;
 }
 
 class RatingsUpdate {
   @ValidateBoolean({ optional: true })
   enabled?: boolean;
+}
+
+class AlbumsUpdate {
+  @ValidateEnum({ enum: AssetOrder, name: 'AssetOrder', optional: true })
+  defaultAssetOrder?: AssetOrder;
 }
 
 class FoldersUpdate {
@@ -85,7 +94,17 @@ class PurchaseUpdate {
   hideBuyButtonUntil?: string;
 }
 
+class CastUpdate {
+  @ValidateBoolean({ optional: true })
+  gCastEnabled?: boolean;
+}
+
 export class UserPreferencesUpdateDto {
+  @Optional()
+  @ValidateNested()
+  @Type(() => AlbumsUpdate)
+  albums?: AlbumsUpdate;
+
   @Optional()
   @ValidateNested()
   @Type(() => FoldersUpdate)
@@ -135,6 +154,16 @@ export class UserPreferencesUpdateDto {
   @ValidateNested()
   @Type(() => PurchaseUpdate)
   purchase?: PurchaseUpdate;
+
+  @Optional()
+  @ValidateNested()
+  @Type(() => CastUpdate)
+  cast?: CastUpdate;
+}
+
+class AlbumsResponse {
+  @ValidateEnum({ enum: AssetOrder, name: 'AssetOrder' })
+  defaultAssetOrder: AssetOrder = AssetOrder.Desc;
 }
 
 class RatingsResponse {
@@ -143,6 +172,9 @@ class RatingsResponse {
 
 class MemoriesResponse {
   enabled: boolean = true;
+
+  @ApiProperty({ type: 'integer' })
+  duration: number = 5;
 }
 
 class FoldersResponse {
@@ -183,7 +215,12 @@ class PurchaseResponse {
   hideBuyButtonUntil!: string;
 }
 
+class CastResponse {
+  gCastEnabled: boolean = false;
+}
+
 export class UserPreferencesResponseDto implements UserPreferences {
+  albums!: AlbumsResponse;
   folders!: FoldersResponse;
   memories!: MemoriesResponse;
   people!: PeopleResponse;
@@ -193,6 +230,7 @@ export class UserPreferencesResponseDto implements UserPreferences {
   emailNotifications!: EmailNotificationsResponse;
   download!: DownloadResponse;
   purchase!: PurchaseResponse;
+  cast!: CastResponse;
 }
 
 export const mapPreferences = (preferences: UserPreferences): UserPreferencesResponseDto => {

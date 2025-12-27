@@ -3,7 +3,6 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:cached_network_image/cached_network_image.dart';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 import 'package:immich_mobile/entities/asset.entity.dart';
@@ -18,11 +17,8 @@ class ImmichLocalImageProvider extends ImageProvider<ImmichLocalImageProvider> {
   final double height;
   final Logger log = Logger('ImmichLocalImageProvider');
 
-  ImmichLocalImageProvider({
-    required this.asset,
-    required this.width,
-    required this.height,
-  }) : assert(asset.local != null, 'Only usable when asset.local is set');
+  ImmichLocalImageProvider({required this.asset, required this.width, required this.height})
+    : assert(asset.local != null, 'Only usable when asset.local is set');
 
   /// Converts an [ImageProvider]'s settings plus an [ImageConfiguration] to a key
   /// that describes the precise image to load.
@@ -32,10 +28,7 @@ class ImmichLocalImageProvider extends ImageProvider<ImmichLocalImageProvider> {
   }
 
   @override
-  ImageStreamCompleter loadImage(
-    ImmichLocalImageProvider key,
-    ImageDecoderCallback decode,
-  ) {
+  ImageStreamCompleter loadImage(ImmichLocalImageProvider key, ImageDecoderCallback decode) {
     final chunkEvents = StreamController<ImageChunkEvent>();
     return MultiImageStreamCompleter(
       codec: _codec(key.asset, decode, chunkEvents),
@@ -83,7 +76,7 @@ class ImmichLocalImageProvider extends ImageProvider<ImmichLocalImageProvider> {
     } catch (error, stack) {
       log.severe('Error loading local image ${asset.fileName}', error, stack);
     } finally {
-      chunkEvents.close();
+      unawaited(chunkEvents.close());
     }
   }
 

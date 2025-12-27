@@ -1,11 +1,7 @@
 <script lang="ts">
   import AlbumSharedLink from '$lib/components/album-page/album-shared-link.svelte';
-  import Dropdown from '$lib/components/elements/dropdown.svelte';
-  import Icon from '$lib/components/elements/icon.svelte';
-  import FullScreenModal from '$lib/components/shared-components/full-screen-modal.svelte';
   import { AppRoute } from '$lib/constants';
-  import QrCodeModal from '$lib/modals/QrCodeModal.svelte';
-  import { makeSharedLinkUrl } from '$lib/utils';
+  import Dropdown from '$lib/elements/Dropdown.svelte';
   import {
     AlbumUserRole,
     getAllSharedLinks,
@@ -15,7 +11,7 @@
     type SharedLinkResponseDto,
     type UserResponseDto,
   } from '@immich/sdk';
-  import { Button, Link, Stack, Text } from '@immich/ui';
+  import { Button, Icon, Link, Modal, ModalBody, Stack, Text } from '@immich/ui';
   import { mdiCheck, mdiEye, mdiLink, mdiPencil } from '@mdi/js';
   import { onMount } from 'svelte';
   import { t } from 'svelte-i18n';
@@ -30,11 +26,6 @@
 
   let users: UserResponseDto[] = $state([]);
   let selectedUsers: Record<string, { user: UserResponseDto; role: AlbumUserRole }> = $state({});
-
-  let sharedLinkUrl = $state('');
-  const handleViewQrCode = (sharedLink: SharedLinkResponseDto) => {
-    sharedLinkUrl = makeSharedLinkUrl(sharedLink.key);
-  };
 
   const roleOptions: Array<{ title: string; value: AlbumUserRole | 'none'; icon?: string }> = [
     { title: $t('role_editor'), value: AlbumUserRole.Editor, icon: mdiPencil },
@@ -73,10 +64,8 @@
   };
 </script>
 
-{#if sharedLinkUrl}
-  <QrCodeModal title={$t('view_link')} onClose={() => (sharedLinkUrl = '')} value={sharedLinkUrl} />
-{:else}
-  <FullScreenModal title={$t('share')} showLogo {onClose}>
+<Modal size="small" title={$t('share')} {onClose}>
+  <ModalBody>
     {#if Object.keys(selectedUsers).length > 0}
       <div class="mb-2 py-2 sticky">
         <p class="text-xs font-medium">{$t('selected')}</p>
@@ -85,13 +74,13 @@
             {#key user.id}
               <div class="flex place-items-center gap-4 p-4">
                 <div
-                  class="flex h-10 w-10 items-center justify-center rounded-full border bg-immich-dark-success text-3xl text-white dark:border-immich-dark-gray dark:bg-immich-dark-success"
+                  class="flex h-10 w-10 items-center justify-center rounded-full border bg-green-600 text-3xl text-white"
                 >
-                  <Icon path={mdiCheck} size={24} />
+                  <Icon icon={mdiCheck} size="24" />
                 </div>
 
                 <!-- <UserAvatar {user} size="md" /> -->
-                <div class="text-start flex-grow">
+                <div class="text-start grow">
                   <p class="text-immich-fg dark:text-immich-dark-fg">
                     {user.name}
                   </p>
@@ -119,7 +108,7 @@
       </p>
     {/if}
 
-    <div class="immich-scrollbar max-h-[500px] overflow-y-auto">
+    <div class="immich-scrollbar max-h-125 overflow-y-auto">
       {#if users.length > 0 && users.length !== Object.keys(selectedUsers).length}
         <Text>{$t('users')}</Text>
 
@@ -133,7 +122,7 @@
                   class="flex w-full place-items-center gap-4 p-4"
                 >
                   <UserAvatar {user} size="md" />
-                  <div class="text-start flex-grow">
+                  <div class="text-start grow">
                     <p class="text-immich-fg dark:text-immich-dark-fg">
                       {user.name}
                     </p>
@@ -171,12 +160,12 @@
       {#if sharedLinks.length > 0}
         <div class="flex justify-between items-center">
           <Text>{$t('shared_links')}</Text>
-          <Link href={AppRoute.SHARED_LINKS} class="text-sm">{$t('view_all')}</Link>
+          <Link href={AppRoute.SHARED_LINKS} onclick={() => onClose()} class="text-sm">{$t('view_all')}</Link>
         </div>
 
         <Stack gap={4}>
           {#each sharedLinks as sharedLink (sharedLink.id)}
-            <AlbumSharedLink {album} {sharedLink} onViewQrCode={() => handleViewQrCode(sharedLink)} />
+            <AlbumSharedLink {album} {sharedLink} />
           {/each}
         </Stack>
       {/if}
@@ -189,5 +178,5 @@
         onclick={() => onClose({ action: 'sharedLink' })}>{$t('create_link')}</Button
       >
     </Stack>
-  </FullScreenModal>
-{/if}
+  </ModalBody>
+</Modal>

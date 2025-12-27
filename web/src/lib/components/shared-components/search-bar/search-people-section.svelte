@@ -1,13 +1,11 @@
 <script lang="ts">
   import ImageThumbnail from '$lib/components/assets/thumbnail/image-thumbnail.svelte';
-  import Button from '$lib/components/elements/buttons/button.svelte';
-  import Icon from '$lib/components/elements/icon.svelte';
-  import SearchBar from '$lib/components/elements/search-bar.svelte';
-  import LoadingSpinner from '$lib/components/shared-components/loading-spinner.svelte';
   import SingleGridRow from '$lib/components/shared-components/single-grid-row.svelte';
+  import SearchBar from '$lib/elements/SearchBar.svelte';
   import { getPeopleThumbnailUrl } from '$lib/utils';
   import { handleError } from '$lib/utils/handle-error';
   import { getAllPeople, type PersonResponseDto } from '@immich/sdk';
+  import { Button, LoadingSpinner } from '@immich/ui';
   import { mdiArrowRight, mdiClose } from '@mdi/js';
   import { t } from 'svelte-i18n';
   import type { SvelteSet } from 'svelte/reactivity';
@@ -54,8 +52,8 @@
 </script>
 
 {#await peoplePromise}
-  <div id="spinner" class="flex h-[217px] items-center justify-center -mb-4">
-    <LoadingSpinner size="24" />
+  <div id="spinner" class="flex h-54 items-center justify-center -mb-4">
+    <LoadingSpinner size="large" />
   </div>
 {:then people}
   {#if people && people.length > 0}
@@ -65,7 +63,7 @@
 
     <div id="people-selection" class="max-h-60 -mb-4 overflow-y-auto immich-scrollbar">
       <div class="flex items-center w-full justify-between gap-6">
-        <p class="immich-form-label py-3">{$t('people').toUpperCase()}</p>
+        <p class="uppercase immich-form-label py-3">{$t('people')}</p>
         <SearchBar bind:name placeholder={$t('filter_people')} showLoadingSpinner={false} />
       </div>
 
@@ -92,18 +90,14 @@
       {#if showAllPeople || people.length > peopleList.length}
         <div class="flex justify-center mt-2">
           <Button
-            shadow={false}
-            color="text-primary"
+            color="primary"
+            variant="ghost"
+            shape="round"
+            leadingIcon={showAllPeople ? mdiClose : mdiArrowRight}
             class="flex gap-2 place-items-center"
             onclick={() => (showAllPeople = !showAllPeople)}
           >
-            {#if showAllPeople}
-              <span><Icon path={mdiClose} ariaHidden /></span>
-              {$t('collapse')}
-            {:else}
-              <span><Icon path={mdiArrowRight} ariaHidden /></span>
-              {$t('see_all_people')}
-            {/if}
+            {showAllPeople ? $t('collapse') : $t('see_all_people')}
           </Button>
         </div>
       {/if}

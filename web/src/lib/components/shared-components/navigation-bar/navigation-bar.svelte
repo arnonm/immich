@@ -5,23 +5,19 @@
 <script lang="ts">
   import { page } from '$app/state';
   import { clickOutside } from '$lib/actions/click-outside';
-  import SkipLink from '$lib/components/elements/buttons/skip-link.svelte';
-  import ImmichLogo from '$lib/components/shared-components/immich-logo.svelte';
+  import CastButton from '$lib/cast/cast-button.svelte';
   import NotificationPanel from '$lib/components/shared-components/navigation-bar/notification-panel.svelte';
   import SearchBar from '$lib/components/shared-components/search-bar/search-bar.svelte';
   import { AppRoute } from '$lib/constants';
+  import SkipLink from '$lib/elements/SkipLink.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { modalManager } from '$lib/managers/modal-manager.svelte';
-  import HelpAndFeedbackModal from '$lib/modals/HelpAndFeedbackModal.svelte';
+  import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
   import { mobileDevice } from '$lib/stores/mobile-device.svelte';
   import { notificationManager } from '$lib/stores/notification-manager.svelte';
-  import { featureFlags } from '$lib/stores/server-config.store';
   import { sidebarStore } from '$lib/stores/sidebar.svelte';
   import { user } from '$lib/stores/user.store';
-  import { userInteraction } from '$lib/stores/user.svelte';
-  import { getAboutInfo, type ServerAboutResponseDto } from '@immich/sdk';
-  import { Button, IconButton } from '@immich/ui';
-  import { mdiBellBadge, mdiBellOutline, mdiHelpCircleOutline, mdiMagnify, mdiMenu, mdiTrayArrowUp } from '@mdi/js';
+  import { Button, IconButton, Logo } from '@immich/ui';
+  import { mdiBellBadge, mdiBellOutline, mdiMagnify, mdiMenu, mdiTrayArrowUp } from '@mdi/js';
   import { onMount } from 'svelte';
   import { t } from 'svelte-i18n';
   import ThemeButton from '../theme-button.svelte';
@@ -30,32 +26,35 @@
 
   interface Props {
     showUploadButton?: boolean;
-    onUploadClick: () => void;
+    onUploadClick?: () => void;
+    // TODO: remove once this is only used in <AppShellHeader>
+    noBorder?: boolean;
   }
 
-  let { showUploadButton = true, onUploadClick }: Props = $props();
+  let { showUploadButton = true, onUploadClick, noBorder = false }: Props = $props();
 
   let shouldShowAccountInfoPanel = $state(false);
   let shouldShowNotificationPanel = $state(false);
   let innerWidth: number = $state(0);
   const hasUnreadNotifications = $derived(notificationManager.notifications.length > 0);
 
-  let info: ServerAboutResponseDto | undefined = $state();
-
   onMount(async () => {
-    info = userInteraction.aboutInfo ?? (await getAboutInfo());
+    try {
+      await notificationManager.refresh();
+    } catch (error) {
+      console.error('Failed to load notifications on mount', error);
+    }
   });
 </script>
 
 <svelte:window bind:innerWidth />
 
-<nav
-  id="dashboard-navbar"
-  class="max-md:h-[var(--navbar-height-md)] h-[var(--navbar-height)] w-dvw text-sm overflow-hidden"
->
+<nav id="dashboard-navbar" class="max-md:h-(--navbar-height-md) h-(--navbar-height) w-dvw text-sm">
   <SkipLink text={$t('skip_to_content')} />
   <div
-    class="grid h-full grid-cols-[theme(spacing.32)_auto] items-center border-b py-2 dark:border-b-immich-dark-gray sidebar:grid-cols-[theme(spacing.64)_auto]"
+    class="grid h-full grid-cols-[--spacing(32)_auto] items-center py-2 sidebar:grid-cols-[--spacing(64)_auto] {noBorder
+      ? ''
+      : 'border-b'}"
   >
     <div class="flex flex-row gap-1 mx-4 items-center">
       <IconButton
@@ -78,18 +77,18 @@
         class="sidebar:hidden"
       />
       <a data-sveltekit-preload-data="hover" href={AppRoute.PHOTOS}>
-        <ImmichLogo class="max-md:h-[48px] h-[50px]" noText={!mobileDevice.isFullSidebar} />
+        <Logo variant={mobileDevice.isFullSidebar ? 'inline' : 'icon'} class="max-md:h-12" />
       </a>
     </div>
     <div class="flex justify-between gap-4 lg:gap-8 pe-6">
       <div class="hidden w-full max-w-5xl flex-1 tall:ps-0 sm:block">
-        {#if $featureFlags.search}
+        {#if featureFlagsManager.value.search}
           <SearchBar grayTheme={true} />
         {/if}
       </div>
 
       <section class="flex place-items-center justify-end gap-1 md:gap-2 w-full sm:w-auto">
-        {#if $featureFlags.search}
+        {#if featureFlagsManager.value.search}
           <IconButton
             color="secondary"
             shape="round"
@@ -103,7 +102,7 @@
           />
         {/if}
 
-        {#if !page.url.pathname.includes('/admin') && showUploadButton}
+        {#if !page.url.pathname.includes('/admin') && showUploadButton && onUploadClick}
           <Button
             leadingIcon={mdiTrayArrowUp}
             onclick={onUploadClick}
@@ -126,19 +125,7 @@
           />
         {/if}
 
-        <ThemeButton padding="2" />
-
-        <div>
-          <IconButton
-            shape="round"
-            color="secondary"
-            variant="ghost"
-            size="medium"
-            icon={mdiHelpCircleOutline}
-            onclick={() => info && modalManager.show(HelpAndFeedbackModal, { info })}
-            aria-label={$t('support_and_feedback')}
-          />
-        </div>
+        <ThemeButton />
 
         <div
           use:clickOutside={{
@@ -146,20 +133,32 @@
             onEscape: () => (shouldShowNotificationPanel = false),
           }}
         >
-          <IconButton
-            shape="round"
-            color={hasUnreadNotifications ? 'primary' : 'secondary'}
-            variant="ghost"
-            size="medium"
-            icon={hasUnreadNotifications ? mdiBellBadge : mdiBellOutline}
-            onclick={() => (shouldShowNotificationPanel = !shouldShowNotificationPanel)}
-            aria-label={$t('notifications')}
-          />
+          <div class="relative">
+            <IconButton
+              shape="round"
+              color={hasUnreadNotifications ? 'primary' : 'secondary'}
+              variant="ghost"
+              size="medium"
+              icon={hasUnreadNotifications ? mdiBellBadge : mdiBellOutline}
+              onclick={() => (shouldShowNotificationPanel = !shouldShowNotificationPanel)}
+              aria-label={$t('notifications')}
+            />
+
+            {#if hasUnreadNotifications}
+              <div
+                class="pointer-events-none absolute border top-0 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-light"
+              >
+                {notificationManager.notifications.length}
+              </div>
+            {/if}
+          </div>
 
           {#if shouldShowNotificationPanel}
             <NotificationPanel />
           {/if}
         </div>
+
+        <CastButton />
 
         <div
           use:clickOutside={{
@@ -174,12 +173,15 @@
             title={`${$user.name} (${$user.email})`}
           >
             {#key $user}
-              <UserAvatar user={$user} size="md" showTitle={false} interactive />
+              <UserAvatar user={$user} size="md" noTitle interactive />
             {/key}
           </button>
 
           {#if shouldShowAccountInfoPanel}
-            <AccountInfoPanel onLogout={() => authManager.logout()} />
+            <AccountInfoPanel
+              onLogout={() => authManager.logout()}
+              onClose={() => (shouldShowAccountInfoPanel = false)}
+            />
           {/if}
         </div>
       </section>

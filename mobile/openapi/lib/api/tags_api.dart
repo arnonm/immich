@@ -16,7 +16,12 @@ class TagsApi {
 
   final ApiClient apiClient;
 
-  /// Performs an HTTP 'PUT /tags/assets' operation and returns the [Response].
+  /// Tag assets
+  ///
+  /// Add multiple tags to multiple assets in a single request.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [TagBulkAssetsDto] tagBulkAssetsDto (required):
@@ -45,6 +50,10 @@ class TagsApi {
     );
   }
 
+  /// Tag assets
+  ///
+  /// Add multiple tags to multiple assets in a single request.
+  ///
   /// Parameters:
   ///
   /// * [TagBulkAssetsDto] tagBulkAssetsDto (required):
@@ -63,7 +72,12 @@ class TagsApi {
     return null;
   }
 
-  /// Performs an HTTP 'POST /tags' operation and returns the [Response].
+  /// Create a tag
+  ///
+  /// Create a new tag by providing a name and optional color.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [TagCreateDto] tagCreateDto (required):
@@ -92,6 +106,10 @@ class TagsApi {
     );
   }
 
+  /// Create a tag
+  ///
+  /// Create a new tag by providing a name and optional color.
+  ///
   /// Parameters:
   ///
   /// * [TagCreateDto] tagCreateDto (required):
@@ -110,7 +128,12 @@ class TagsApi {
     return null;
   }
 
-  /// Performs an HTTP 'DELETE /tags/{id}' operation and returns the [Response].
+  /// Delete a tag
+  ///
+  /// Delete a specific tag by its ID.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -140,6 +163,10 @@ class TagsApi {
     );
   }
 
+  /// Delete a tag
+  ///
+  /// Delete a specific tag by its ID.
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -150,7 +177,11 @@ class TagsApi {
     }
   }
 
-  /// Performs an HTTP 'GET /tags' operation and returns the [Response].
+  /// Retrieve tags
+  ///
+  /// Retrieve a list of all tags.
+  ///
+  /// Note: This method returns the HTTP [Response].
   Future<Response> getAllTagsWithHttpInfo() async {
     // ignore: prefer_const_declarations
     final apiPath = r'/tags';
@@ -176,6 +207,9 @@ class TagsApi {
     );
   }
 
+  /// Retrieve tags
+  ///
+  /// Retrieve a list of all tags.
   Future<List<TagResponseDto>?> getAllTags() async {
     final response = await getAllTagsWithHttpInfo();
     if (response.statusCode >= HttpStatus.badRequest) {
@@ -194,7 +228,12 @@ class TagsApi {
     return null;
   }
 
-  /// Performs an HTTP 'GET /tags/{id}' operation and returns the [Response].
+  /// Retrieve a tag
+  ///
+  /// Retrieve a specific tag by its ID.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -224,6 +263,10 @@ class TagsApi {
     );
   }
 
+  /// Retrieve a tag
+  ///
+  /// Retrieve a specific tag by its ID.
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -242,7 +285,12 @@ class TagsApi {
     return null;
   }
 
-  /// Performs an HTTP 'PUT /tags/{id}/assets' operation and returns the [Response].
+  /// Tag assets
+  ///
+  /// Add a tag to all the specified assets.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -274,6 +322,10 @@ class TagsApi {
     );
   }
 
+  /// Tag assets
+  ///
+  /// Add a tag to all the specified assets.
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -297,7 +349,12 @@ class TagsApi {
     return null;
   }
 
-  /// Performs an HTTP 'DELETE /tags/{id}/assets' operation and returns the [Response].
+  /// Untag assets
+  ///
+  /// Remove a tag from all the specified assets.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -329,6 +386,10 @@ class TagsApi {
     );
   }
 
+  /// Untag assets
+  ///
+  /// Remove a tag from all the specified assets.
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -352,7 +413,12 @@ class TagsApi {
     return null;
   }
 
-  /// Performs an HTTP 'PUT /tags/{id}' operation and returns the [Response].
+  /// Update a tag
+  ///
+  /// Update an existing tag identified by its ID.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -384,6 +450,10 @@ class TagsApi {
     );
   }
 
+  /// Update a tag
+  ///
+  /// Update an existing tag identified by its ID.
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -404,7 +474,12 @@ class TagsApi {
     return null;
   }
 
-  /// Performs an HTTP 'PUT /tags' operation and returns the [Response].
+  /// Upsert tags
+  ///
+  /// Create or update multiple tags in a single request.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [TagUpsertDto] tagUpsertDto (required):
@@ -433,6 +508,10 @@ class TagsApi {
     );
   }
 
+  /// Upsert tags
+  ///
+  /// Create or update multiple tags in a single request.
+  ///
   /// Parameters:
   ///
   /// * [TagUpsertDto] tagUpsertDto (required):

@@ -1,21 +1,15 @@
 <script lang="ts">
   import { shortcut } from '$lib/actions/shortcut';
   import ImageThumbnail from '$lib/components/assets/thumbnail/image-thumbnail.svelte';
-  import Button from '$lib/components/elements/buttons/button.svelte';
   import PeopleInfiniteScroll from '$lib/components/faces-page/people-infinite-scroll.svelte';
-  import LoadingSpinner from '$lib/components/shared-components/loading-spinner.svelte';
-  import {
-    notificationController,
-    NotificationType,
-  } from '$lib/components/shared-components/notification/notification';
   import { ToggleVisibility } from '$lib/constants';
   import { locale } from '$lib/stores/preferences.store';
   import { getPeopleThumbnailUrl } from '$lib/utils';
   import { handleError } from '$lib/utils/handle-error';
   import { updatePeople, type PersonResponseDto } from '@immich/sdk';
+  import { Button, IconButton, toastManager } from '@immich/ui';
   import { mdiClose, mdiEye, mdiEyeOff, mdiEyeSettings, mdiRestart } from '@mdi/js';
   import { t } from 'svelte-i18n';
-  import CircleIconButton from '../elements/buttons/circle-icon-button.svelte';
 
   interface Props {
     people: PersonResponseDto[];
@@ -76,15 +70,9 @@
         const successCount = results.filter(({ success }) => success).length;
         const failCount = results.length - successCount;
         if (failCount > 0) {
-          notificationController.show({
-            type: NotificationType.Error,
-            message: $t('errors.unable_to_change_visibility', { values: { count: failCount } }),
-          });
+          toastManager.warning($t('errors.unable_to_change_visibility', { values: { count: failCount } }));
         }
-        notificationController.show({
-          type: NotificationType.Info,
-          message: $t('visibility_changed', { values: { count: successCount } }),
-        });
+        toastManager.success($t('visibility_changed', { values: { count: successCount } }));
       }
 
       for (const person of people) {
@@ -109,13 +97,20 @@
   let toggleButton = $derived(toggleButtonOptions[getNextVisibility(toggleVisibility)]);
 </script>
 
-<svelte:window use:shortcut={{ shortcut: { key: 'Escape' }, onShortcut: onClose }} />
+<svelte:document use:shortcut={{ shortcut: { key: 'Escape' }, onShortcut: onClose }} />
 
 <div
-  class="fixed top-0 flex h-16 w-full items-center justify-between border-b bg-white p-1 dark:border-immich-dark-gray dark:bg-black dark:text-immich-dark-fg md:p-8"
+  class="fixed top-0 z-1 flex h-16 w-full items-center justify-between border-b bg-white p-1 dark:border-immich-dark-gray dark:bg-black dark:text-immich-dark-fg md:p-8"
 >
   <div class="flex items-center">
-    <CircleIconButton title={$t('close')} icon={mdiClose} onclick={onClose} />
+    <IconButton
+      shape="round"
+      color="secondary"
+      variant="ghost"
+      aria-label={$t('close')}
+      icon={mdiClose}
+      onclick={onClose}
+    />
     <div class="flex gap-2 items-center">
       <p id={titleId} class="ms-2">{$t('show_and_hide_people')}</p>
       <p class="text-sm text-gray-400 dark:text-gray-600">({totalPeopleCount.toLocaleString($locale)})</p>
@@ -123,14 +118,24 @@
   </div>
   <div class="flex items-center justify-end">
     <div class="flex items-center md:me-4">
-      <CircleIconButton title={$t('reset_people_visibility')} icon={mdiRestart} onclick={handleResetVisibility} />
-      <CircleIconButton title={toggleButton.label} icon={toggleButton.icon} onclick={handleToggleVisibility} />
+      <IconButton
+        shape="round"
+        color="secondary"
+        variant="ghost"
+        aria-label={$t('reset_people_visibility')}
+        icon={mdiRestart}
+        onclick={handleResetVisibility}
+      />
+      <IconButton
+        shape="round"
+        color="secondary"
+        variant="ghost"
+        aria-label={toggleButton.label}
+        icon={toggleButton.icon}
+        onclick={handleToggleVisibility}
+      />
     </div>
-    {#if !showLoadingSpinner}
-      <Button onclick={handleSaveVisibility} size="sm" rounded="lg">{$t('done')}</Button>
-    {:else}
-      <LoadingSpinner />
-    {/if}
+    <Button loading={showLoadingSpinner} onclick={handleSaveVisibility} size="small">{$t('done')}</Button>
   </div>
 </div>
 
@@ -152,6 +157,7 @@
           altText={person.name}
           widthStyle="100%"
           hiddenIconClass="text-white group-hover:text-black transition-colors"
+          preload={false}
         />
         {#if person.name}
           <span class="absolute bottom-2 start-0 w-full select-text px-1 text-center font-medium text-white">

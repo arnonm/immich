@@ -16,7 +16,12 @@ class PeopleApi {
 
   final ApiClient apiClient;
 
-  /// Performs an HTTP 'POST /people' operation and returns the [Response].
+  /// Create a person
+  ///
+  /// Create a new person that can have multiple faces assigned to them.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [PersonCreateDto] personCreateDto (required):
@@ -45,6 +50,10 @@ class PeopleApi {
     );
   }
 
+  /// Create a person
+  ///
+  /// Create a new person that can have multiple faces assigned to them.
+  ///
   /// Parameters:
   ///
   /// * [PersonCreateDto] personCreateDto (required):
@@ -63,7 +72,109 @@ class PeopleApi {
     return null;
   }
 
-  /// Performs an HTTP 'GET /people' operation and returns the [Response].
+  /// Delete people
+  ///
+  /// Bulk delete a list of people at once.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
+  /// Parameters:
+  ///
+  /// * [BulkIdsDto] bulkIdsDto (required):
+  Future<Response> deletePeopleWithHttpInfo(BulkIdsDto bulkIdsDto,) async {
+    // ignore: prefer_const_declarations
+    final apiPath = r'/people';
+
+    // ignore: prefer_final_locals
+    Object? postBody = bulkIdsDto;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+    const contentTypes = <String>['application/json'];
+
+
+    return apiClient.invokeAPI(
+      apiPath,
+      'DELETE',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+    );
+  }
+
+  /// Delete people
+  ///
+  /// Bulk delete a list of people at once.
+  ///
+  /// Parameters:
+  ///
+  /// * [BulkIdsDto] bulkIdsDto (required):
+  Future<void> deletePeople(BulkIdsDto bulkIdsDto,) async {
+    final response = await deletePeopleWithHttpInfo(bulkIdsDto,);
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+  }
+
+  /// Delete person
+  ///
+  /// Delete an individual person.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
+  /// Parameters:
+  ///
+  /// * [String] id (required):
+  Future<Response> deletePersonWithHttpInfo(String id,) async {
+    // ignore: prefer_const_declarations
+    final apiPath = r'/people/{id}'
+      .replaceAll('{id}', id);
+
+    // ignore: prefer_final_locals
+    Object? postBody;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+    const contentTypes = <String>[];
+
+
+    return apiClient.invokeAPI(
+      apiPath,
+      'DELETE',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+    );
+  }
+
+  /// Delete person
+  ///
+  /// Delete an individual person.
+  ///
+  /// Parameters:
+  ///
+  /// * [String] id (required):
+  Future<void> deletePerson(String id,) async {
+    final response = await deletePersonWithHttpInfo(id,);
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+  }
+
+  /// Get all people
+  ///
+  /// Retrieve a list of all people.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [String] closestAssetId:
@@ -118,6 +229,10 @@ class PeopleApi {
     );
   }
 
+  /// Get all people
+  ///
+  /// Retrieve a list of all people.
+  ///
   /// Parameters:
   ///
   /// * [String] closestAssetId:
@@ -146,7 +261,12 @@ class PeopleApi {
     return null;
   }
 
-  /// Performs an HTTP 'GET /people/{id}' operation and returns the [Response].
+  /// Get a person
+  ///
+  /// Retrieve a person by id.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -176,6 +296,10 @@ class PeopleApi {
     );
   }
 
+  /// Get a person
+  ///
+  /// Retrieve a person by id.
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -194,7 +318,12 @@ class PeopleApi {
     return null;
   }
 
-  /// Performs an HTTP 'GET /people/{id}/statistics' operation and returns the [Response].
+  /// Get person statistics
+  ///
+  /// Retrieve statistics about a specific person.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -224,6 +353,10 @@ class PeopleApi {
     );
   }
 
+  /// Get person statistics
+  ///
+  /// Retrieve statistics about a specific person.
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -242,7 +375,12 @@ class PeopleApi {
     return null;
   }
 
-  /// Performs an HTTP 'GET /people/{id}/thumbnail' operation and returns the [Response].
+  /// Get person thumbnail
+  ///
+  /// Retrieve the thumbnail file for a person.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -272,6 +410,10 @@ class PeopleApi {
     );
   }
 
+  /// Get person thumbnail
+  ///
+  /// Retrieve the thumbnail file for a person.
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -290,7 +432,12 @@ class PeopleApi {
     return null;
   }
 
-  /// Performs an HTTP 'POST /people/{id}/merge' operation and returns the [Response].
+  /// Merge people
+  ///
+  /// Merge a list of people into the person specified in the path parameter.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -322,6 +469,10 @@ class PeopleApi {
     );
   }
 
+  /// Merge people
+  ///
+  /// Merge a list of people into the person specified in the path parameter.
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -345,7 +496,12 @@ class PeopleApi {
     return null;
   }
 
-  /// Performs an HTTP 'PUT /people/{id}/reassign' operation and returns the [Response].
+  /// Reassign faces
+  ///
+  /// Bulk reassign a list of faces to a different person.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -377,6 +533,10 @@ class PeopleApi {
     );
   }
 
+  /// Reassign faces
+  ///
+  /// Bulk reassign a list of faces to a different person.
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -400,7 +560,12 @@ class PeopleApi {
     return null;
   }
 
-  /// Performs an HTTP 'PUT /people' operation and returns the [Response].
+  /// Update people
+  ///
+  /// Bulk update multiple people at once.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [PeopleUpdateDto] peopleUpdateDto (required):
@@ -429,6 +594,10 @@ class PeopleApi {
     );
   }
 
+  /// Update people
+  ///
+  /// Bulk update multiple people at once.
+  ///
   /// Parameters:
   ///
   /// * [PeopleUpdateDto] peopleUpdateDto (required):
@@ -450,7 +619,12 @@ class PeopleApi {
     return null;
   }
 
-  /// Performs an HTTP 'PUT /people/{id}' operation and returns the [Response].
+  /// Update person
+  ///
+  /// Update an individual person.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -482,6 +656,10 @@ class PeopleApi {
     );
   }
 
+  /// Update person
+  ///
+  /// Update an individual person.
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):

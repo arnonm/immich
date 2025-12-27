@@ -16,7 +16,12 @@ class LibrariesApi {
 
   final ApiClient apiClient;
 
-  /// Performs an HTTP 'POST /libraries' operation and returns the [Response].
+  /// Create a library
+  ///
+  /// Create a new external library.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [CreateLibraryDto] createLibraryDto (required):
@@ -45,6 +50,10 @@ class LibrariesApi {
     );
   }
 
+  /// Create a library
+  ///
+  /// Create a new external library.
+  ///
   /// Parameters:
   ///
   /// * [CreateLibraryDto] createLibraryDto (required):
@@ -63,7 +72,12 @@ class LibrariesApi {
     return null;
   }
 
-  /// Performs an HTTP 'DELETE /libraries/{id}' operation and returns the [Response].
+  /// Delete a library
+  ///
+  /// Delete an external library by its ID.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -93,6 +107,10 @@ class LibrariesApi {
     );
   }
 
+  /// Delete a library
+  ///
+  /// Delete an external library by its ID.
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -103,7 +121,11 @@ class LibrariesApi {
     }
   }
 
-  /// Performs an HTTP 'GET /libraries' operation and returns the [Response].
+  /// Retrieve libraries
+  ///
+  /// Retrieve a list of external libraries.
+  ///
+  /// Note: This method returns the HTTP [Response].
   Future<Response> getAllLibrariesWithHttpInfo() async {
     // ignore: prefer_const_declarations
     final apiPath = r'/libraries';
@@ -129,6 +151,9 @@ class LibrariesApi {
     );
   }
 
+  /// Retrieve libraries
+  ///
+  /// Retrieve a list of external libraries.
   Future<List<LibraryResponseDto>?> getAllLibraries() async {
     final response = await getAllLibrariesWithHttpInfo();
     if (response.statusCode >= HttpStatus.badRequest) {
@@ -147,7 +172,12 @@ class LibrariesApi {
     return null;
   }
 
-  /// Performs an HTTP 'GET /libraries/{id}' operation and returns the [Response].
+  /// Retrieve a library
+  ///
+  /// Retrieve an external library by its ID.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -177,6 +207,10 @@ class LibrariesApi {
     );
   }
 
+  /// Retrieve a library
+  ///
+  /// Retrieve an external library by its ID.
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -195,7 +229,12 @@ class LibrariesApi {
     return null;
   }
 
-  /// Performs an HTTP 'GET /libraries/{id}/statistics' operation and returns the [Response].
+  /// Retrieve library statistics
+  ///
+  /// Retrieve statistics for a specific external library, including number of videos, images, and storage usage.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -225,6 +264,10 @@ class LibrariesApi {
     );
   }
 
+  /// Retrieve library statistics
+  ///
+  /// Retrieve statistics for a specific external library, including number of videos, images, and storage usage.
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -243,7 +286,12 @@ class LibrariesApi {
     return null;
   }
 
-  /// Performs an HTTP 'POST /libraries/{id}/scan' operation and returns the [Response].
+  /// Scan a library
+  ///
+  /// Queue a scan for the external library to find and import new assets.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -273,6 +321,10 @@ class LibrariesApi {
     );
   }
 
+  /// Scan a library
+  ///
+  /// Queue a scan for the external library to find and import new assets.
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -283,7 +335,12 @@ class LibrariesApi {
     }
   }
 
-  /// Performs an HTTP 'PUT /libraries/{id}' operation and returns the [Response].
+  /// Update a library
+  ///
+  /// Update an existing external library.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -315,6 +372,10 @@ class LibrariesApi {
     );
   }
 
+  /// Update a library
+  ///
+  /// Update an existing external library.
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -335,7 +396,12 @@ class LibrariesApi {
     return null;
   }
 
-  /// Performs an HTTP 'POST /libraries/{id}/validate' operation and returns the [Response].
+  /// Validate library settings
+  ///
+  /// Validate the settings of an external library.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -367,6 +433,10 @@ class LibrariesApi {
     );
   }
 
+  /// Validate library settings
+  ///
+  /// Validate the settings of an external library.
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):

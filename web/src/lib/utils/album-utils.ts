@@ -1,6 +1,5 @@
 import { goto } from '$app/navigation';
 import { AppRoute } from '$lib/constants';
-import { modalManager } from '$lib/managers/modal-manager.svelte';
 import {
   AlbumFilter,
   AlbumGroupBy,
@@ -201,19 +200,6 @@ export const collapseAllAlbumGroups = (groupIds: string[]) => {
 
 export const expandAllAlbumGroups = () => {
   collapseAllAlbumGroups([]);
-};
-
-export const confirmAlbumDelete = async (album: AlbumResponseDto) => {
-  const $t = get(t);
-  const confirmation =
-    album.albumName.length > 0
-      ? $t('album_delete_confirmation', { values: { album: album.albumName } })
-      : $t('unnamed_album_delete_confirmation');
-
-  const description = $t('album_delete_confirmation_description');
-  const prompt = `${confirmation} ${description}`;
-
-  return modalManager.showDialog({ prompt });
 };
 
 interface AlbumSortOption {

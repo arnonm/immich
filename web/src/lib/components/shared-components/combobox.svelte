@@ -22,9 +22,8 @@
 <script lang="ts">
   import { focusOutside } from '$lib/actions/focus-outside';
   import { shortcuts } from '$lib/actions/shortcut';
-  import CircleIconButton from '$lib/components/elements/buttons/circle-icon-button.svelte';
-  import Icon from '$lib/components/elements/icon.svelte';
   import { generateId } from '$lib/utils/generate-id';
+  import { Icon, IconButton, Label } from '@immich/ui';
   import { mdiClose, mdiMagnify, mdiUnfoldMoreHorizontal } from '@mdi/js';
   import { onMount, tick } from 'svelte';
   import { t } from 'svelte-i18n';
@@ -33,6 +32,7 @@
 
   interface Props {
     label: string;
+    disabled?: boolean;
     hideLabel?: boolean;
     options?: ComboBoxOption[];
     selectedOption?: ComboBoxOption | undefined;
@@ -46,17 +46,20 @@
      */
     defaultFirstOption?: boolean;
     onSelect?: (option: ComboBoxOption | undefined) => void;
+    forceFocus?: boolean;
   }
 
   let {
     label,
     hideLabel = false,
+    disabled = false,
     options = [],
     selectedOption = $bindable(),
     placeholder = '',
     allowCreate = false,
     defaultFirstOption = false,
     onSelect = () => {},
+    forceFocus = false,
   }: Props = $props();
 
   /**
@@ -103,9 +106,9 @@
     }
     observer.observe(input);
     const scrollableAncestor = input?.closest('.overflow-y-auto, .overflow-y-scroll');
-    scrollableAncestor?.addEventListener('scroll', onPositionChange);
-    window.visualViewport?.addEventListener('resize', onPositionChange);
-    window.visualViewport?.addEventListener('scroll', onPositionChange);
+    scrollableAncestor?.addEventListener('scroll', onPositionChange, { passive: true });
+    window.visualViewport?.addEventListener('resize', onPositionChange, { passive: true });
+    window.visualViewport?.addEventListener('scroll', onPositionChange, { passive: true });
 
     return () => {
       observer.disconnect();
@@ -114,6 +117,12 @@
       window.visualViewport?.removeEventListener('scroll', onPositionChange);
     };
   });
+
+  const forceFocusInput = (el: HTMLDivElement) => {
+    if (forceFocus) {
+      el.focus();
+    }
+  };
 
   const activate = () => {
     isActive = true;
@@ -242,7 +251,7 @@
 </script>
 
 <svelte:window onresize={onPositionChange} />
-<label class="immich-form-label" class:sr-only={hideLabel} for={inputId}>{label}</label>
+<Label class="block mb-1 {hideLabel ? 'sr-only' : ''}" for={inputId}>{label}</Label>
 <div
   class="relative w-full dark:text-gray-300 text-gray-700 text-base"
   use:focusOutside={{ onFocusOut: deactivate }}
@@ -260,13 +269,14 @@
     {#if isActive}
       <div class="absolute inset-y-0 start-0 flex items-center ps-3">
         <div class="dark:text-immich-dark-fg/75">
-          <Icon path={mdiMagnify} ariaHidden={true} />
+          <Icon icon={mdiMagnify} aria-hidden />
         </div>
       </div>
     {/if}
 
     <input
       {placeholder}
+      {disabled}
       aria-activedescendant={selectedIndex || selectedIndex === 0 ? `${listboxId}-${selectedIndex}` : ''}
       aria-autocomplete="list"
       aria-controls={listboxId}
@@ -277,13 +287,14 @@
       class:!rounded-b-none={isOpen && dropdownDirection === 'bottom'}
       class:!rounded-t-none={isOpen && dropdownDirection === 'top'}
       class:cursor-pointer={!isActive}
-      class="immich-form-input text-sm w-full !pe-12 transition-all"
+      class="immich-form-input text-sm w-full pe-12! transition-all"
       id={inputId}
       onfocus={activate}
       oninput={onInput}
       role="combobox"
       type="text"
       value={searchQuery}
+      use:forceFocusInput
       use:shortcuts={[
         {
           shortcut: { key: 'ArrowUp' },
@@ -330,9 +341,17 @@
       class:pointer-events-none={!selectedOption}
     >
       {#if selectedOption}
-        <CircleIconButton onclick={onClear} title={$t('clear_value')} icon={mdiClose} size="16" padding="2" />
+        <IconButton
+          shape="round"
+          color="secondary"
+          variant="ghost"
+          onclick={onClear}
+          aria-label={$t('clear_value')}
+          icon={mdiClose}
+          size="small"
+        />
       {:else if !isOpen}
-        <Icon path={mdiUnfoldMoreHorizontal} ariaHidden={true} />
+        <Icon icon={mdiUnfoldMoreHorizontal} aria-hidden />
       {/if}
     </div>
   </div>
@@ -340,8 +359,8 @@
   <ul
     role="listbox"
     id={listboxId}
-    transition:fly={{ duration: 250 }}
-    class="fixed z-[1] text-start text-sm w-full overflow-y-auto bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-900"
+    in:fly={{ duration: 250 }}
+    class="fixed z-1 text-start text-sm w-full overflow-y-auto bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-900"
     class:rounded-b-xl={dropdownDirection === 'bottom'}
     class:rounded-t-xl={dropdownDirection === 'top'}
     class:shadow={dropdownDirection === 'bottom'}

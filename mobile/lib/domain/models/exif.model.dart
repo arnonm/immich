@@ -23,8 +23,7 @@ class ExifInfo {
   final int? iso;
   final double? exposureSeconds;
 
-  bool get hasCoordinates =>
-      latitude != null && longitude != null && latitude != 0 && longitude != 0;
+  bool get hasCoordinates => latitude != null && longitude != null && latitude != 0 && longitude != 0;
 
   String get exposureTime {
     if (exposureSeconds == null) {
@@ -38,7 +37,7 @@ class ExifInfo {
 
   String get fNumber => f == null ? "" : f!.toStringAsFixed(1);
 
-  String get focalLength => mm == null ? "" : mm!.toStringAsFixed(1);
+  String get focalLength => mm == null ? "" : mm!.toStringAsFixed(3);
 
   const ExifInfo({
     this.assetId,
@@ -68,6 +67,7 @@ class ExifInfo {
 
     return other.fileSize == fileSize &&
         other.description == description &&
+        other.isFlipped == isFlipped &&
         other.orientation == orientation &&
         other.timeZone == timeZone &&
         other.dateTimeOriginal == dateTimeOriginal &&
@@ -91,6 +91,7 @@ class ExifInfo {
     return fileSize.hashCode ^
         description.hashCode ^
         orientation.hashCode ^
+        isFlipped.hashCode ^
         timeZone.hashCode ^
         dateTimeOriginal.hashCode ^
         latitude.hashCode ^
@@ -114,6 +115,7 @@ class ExifInfo {
 fileSize: ${fileSize ?? 'NA'},
 description: ${description ?? 'NA'},
 orientation: ${orientation ?? 'NA'},
+isFlipped: $isFlipped,
 timeZone: ${timeZone ?? 'NA'},
 dateTimeOriginal: ${dateTimeOriginal ?? 'NA'},
 latitude: ${latitude ?? 'NA'},

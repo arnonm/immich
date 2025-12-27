@@ -16,7 +16,12 @@ class SharedLinksApi {
 
   final ApiClient apiClient;
 
-  /// Performs an HTTP 'PUT /shared-links/{id}/assets' operation and returns the [Response].
+  /// Add assets to a shared link
+  ///
+  /// Add assets to a specific shared link by its ID. This endpoint is only relevant for shared link of type individual.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -24,7 +29,9 @@ class SharedLinksApi {
   /// * [AssetIdsDto] assetIdsDto (required):
   ///
   /// * [String] key:
-  Future<Response> addSharedLinkAssetsWithHttpInfo(String id, AssetIdsDto assetIdsDto, { String? key, }) async {
+  ///
+  /// * [String] slug:
+  Future<Response> addSharedLinkAssetsWithHttpInfo(String id, AssetIdsDto assetIdsDto, { String? key, String? slug, }) async {
     // ignore: prefer_const_declarations
     final apiPath = r'/shared-links/{id}/assets'
       .replaceAll('{id}', id);
@@ -38,6 +45,9 @@ class SharedLinksApi {
 
     if (key != null) {
       queryParams.addAll(_queryParams('', 'key', key));
+    }
+    if (slug != null) {
+      queryParams.addAll(_queryParams('', 'slug', slug));
     }
 
     const contentTypes = <String>['application/json'];
@@ -54,6 +64,10 @@ class SharedLinksApi {
     );
   }
 
+  /// Add assets to a shared link
+  ///
+  /// Add assets to a specific shared link by its ID. This endpoint is only relevant for shared link of type individual.
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -61,8 +75,10 @@ class SharedLinksApi {
   /// * [AssetIdsDto] assetIdsDto (required):
   ///
   /// * [String] key:
-  Future<List<AssetIdsResponseDto>?> addSharedLinkAssets(String id, AssetIdsDto assetIdsDto, { String? key, }) async {
-    final response = await addSharedLinkAssetsWithHttpInfo(id, assetIdsDto,  key: key, );
+  ///
+  /// * [String] slug:
+  Future<List<AssetIdsResponseDto>?> addSharedLinkAssets(String id, AssetIdsDto assetIdsDto, { String? key, String? slug, }) async {
+    final response = await addSharedLinkAssetsWithHttpInfo(id, assetIdsDto,  key: key, slug: slug, );
     if (response.statusCode >= HttpStatus.badRequest) {
       throw ApiException(response.statusCode, await _decodeBodyBytes(response));
     }
@@ -79,7 +95,12 @@ class SharedLinksApi {
     return null;
   }
 
-  /// Performs an HTTP 'POST /shared-links' operation and returns the [Response].
+  /// Create a shared link
+  ///
+  /// Create a new shared link.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [SharedLinkCreateDto] sharedLinkCreateDto (required):
@@ -108,6 +129,10 @@ class SharedLinksApi {
     );
   }
 
+  /// Create a shared link
+  ///
+  /// Create a new shared link.
+  ///
   /// Parameters:
   ///
   /// * [SharedLinkCreateDto] sharedLinkCreateDto (required):
@@ -126,11 +151,18 @@ class SharedLinksApi {
     return null;
   }
 
-  /// Performs an HTTP 'GET /shared-links' operation and returns the [Response].
+  /// Retrieve all shared links
+  ///
+  /// Retrieve a list of all shared links.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [String] albumId:
-  Future<Response> getAllSharedLinksWithHttpInfo({ String? albumId, }) async {
+  ///
+  /// * [String] id:
+  Future<Response> getAllSharedLinksWithHttpInfo({ String? albumId, String? id, }) async {
     // ignore: prefer_const_declarations
     final apiPath = r'/shared-links';
 
@@ -143,6 +175,9 @@ class SharedLinksApi {
 
     if (albumId != null) {
       queryParams.addAll(_queryParams('', 'albumId', albumId));
+    }
+    if (id != null) {
+      queryParams.addAll(_queryParams('', 'id', id));
     }
 
     const contentTypes = <String>[];
@@ -159,11 +194,17 @@ class SharedLinksApi {
     );
   }
 
+  /// Retrieve all shared links
+  ///
+  /// Retrieve a list of all shared links.
+  ///
   /// Parameters:
   ///
   /// * [String] albumId:
-  Future<List<SharedLinkResponseDto>?> getAllSharedLinks({ String? albumId, }) async {
-    final response = await getAllSharedLinksWithHttpInfo( albumId: albumId, );
+  ///
+  /// * [String] id:
+  Future<List<SharedLinkResponseDto>?> getAllSharedLinks({ String? albumId, String? id, }) async {
+    final response = await getAllSharedLinksWithHttpInfo( albumId: albumId, id: id, );
     if (response.statusCode >= HttpStatus.badRequest) {
       throw ApiException(response.statusCode, await _decodeBodyBytes(response));
     }
@@ -180,15 +221,22 @@ class SharedLinksApi {
     return null;
   }
 
-  /// Performs an HTTP 'GET /shared-links/me' operation and returns the [Response].
+  /// Retrieve current shared link
+  ///
+  /// Retrieve the current shared link associated with authentication method.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [String] key:
   ///
   /// * [String] password:
   ///
+  /// * [String] slug:
+  ///
   /// * [String] token:
-  Future<Response> getMySharedLinkWithHttpInfo({ String? key, String? password, String? token, }) async {
+  Future<Response> getMySharedLinkWithHttpInfo({ String? key, String? password, String? slug, String? token, }) async {
     // ignore: prefer_const_declarations
     final apiPath = r'/shared-links/me';
 
@@ -204,6 +252,9 @@ class SharedLinksApi {
     }
     if (password != null) {
       queryParams.addAll(_queryParams('', 'password', password));
+    }
+    if (slug != null) {
+      queryParams.addAll(_queryParams('', 'slug', slug));
     }
     if (token != null) {
       queryParams.addAll(_queryParams('', 'token', token));
@@ -223,15 +274,21 @@ class SharedLinksApi {
     );
   }
 
+  /// Retrieve current shared link
+  ///
+  /// Retrieve the current shared link associated with authentication method.
+  ///
   /// Parameters:
   ///
   /// * [String] key:
   ///
   /// * [String] password:
   ///
+  /// * [String] slug:
+  ///
   /// * [String] token:
-  Future<SharedLinkResponseDto?> getMySharedLink({ String? key, String? password, String? token, }) async {
-    final response = await getMySharedLinkWithHttpInfo( key: key, password: password, token: token, );
+  Future<SharedLinkResponseDto?> getMySharedLink({ String? key, String? password, String? slug, String? token, }) async {
+    final response = await getMySharedLinkWithHttpInfo( key: key, password: password, slug: slug, token: token, );
     if (response.statusCode >= HttpStatus.badRequest) {
       throw ApiException(response.statusCode, await _decodeBodyBytes(response));
     }
@@ -245,7 +302,12 @@ class SharedLinksApi {
     return null;
   }
 
-  /// Performs an HTTP 'GET /shared-links/{id}' operation and returns the [Response].
+  /// Retrieve a shared link
+  ///
+  /// Retrieve a specific shared link by its ID.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -275,6 +337,10 @@ class SharedLinksApi {
     );
   }
 
+  /// Retrieve a shared link
+  ///
+  /// Retrieve a specific shared link by its ID.
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -293,7 +359,12 @@ class SharedLinksApi {
     return null;
   }
 
-  /// Performs an HTTP 'DELETE /shared-links/{id}' operation and returns the [Response].
+  /// Delete a shared link
+  ///
+  /// Delete a specific shared link by its ID.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -323,6 +394,10 @@ class SharedLinksApi {
     );
   }
 
+  /// Delete a shared link
+  ///
+  /// Delete a specific shared link by its ID.
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -333,7 +408,12 @@ class SharedLinksApi {
     }
   }
 
-  /// Performs an HTTP 'DELETE /shared-links/{id}/assets' operation and returns the [Response].
+  /// Remove assets from a shared link
+  ///
+  /// Remove assets from a specific shared link by its ID. This endpoint is only relevant for shared link of type individual.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -341,7 +421,9 @@ class SharedLinksApi {
   /// * [AssetIdsDto] assetIdsDto (required):
   ///
   /// * [String] key:
-  Future<Response> removeSharedLinkAssetsWithHttpInfo(String id, AssetIdsDto assetIdsDto, { String? key, }) async {
+  ///
+  /// * [String] slug:
+  Future<Response> removeSharedLinkAssetsWithHttpInfo(String id, AssetIdsDto assetIdsDto, { String? key, String? slug, }) async {
     // ignore: prefer_const_declarations
     final apiPath = r'/shared-links/{id}/assets'
       .replaceAll('{id}', id);
@@ -355,6 +437,9 @@ class SharedLinksApi {
 
     if (key != null) {
       queryParams.addAll(_queryParams('', 'key', key));
+    }
+    if (slug != null) {
+      queryParams.addAll(_queryParams('', 'slug', slug));
     }
 
     const contentTypes = <String>['application/json'];
@@ -371,6 +456,10 @@ class SharedLinksApi {
     );
   }
 
+  /// Remove assets from a shared link
+  ///
+  /// Remove assets from a specific shared link by its ID. This endpoint is only relevant for shared link of type individual.
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -378,8 +467,10 @@ class SharedLinksApi {
   /// * [AssetIdsDto] assetIdsDto (required):
   ///
   /// * [String] key:
-  Future<List<AssetIdsResponseDto>?> removeSharedLinkAssets(String id, AssetIdsDto assetIdsDto, { String? key, }) async {
-    final response = await removeSharedLinkAssetsWithHttpInfo(id, assetIdsDto,  key: key, );
+  ///
+  /// * [String] slug:
+  Future<List<AssetIdsResponseDto>?> removeSharedLinkAssets(String id, AssetIdsDto assetIdsDto, { String? key, String? slug, }) async {
+    final response = await removeSharedLinkAssetsWithHttpInfo(id, assetIdsDto,  key: key, slug: slug, );
     if (response.statusCode >= HttpStatus.badRequest) {
       throw ApiException(response.statusCode, await _decodeBodyBytes(response));
     }
@@ -396,7 +487,12 @@ class SharedLinksApi {
     return null;
   }
 
-  /// Performs an HTTP 'PATCH /shared-links/{id}' operation and returns the [Response].
+  /// Update a shared link
+  ///
+  /// Update an existing shared link by its ID.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -428,6 +524,10 @@ class SharedLinksApi {
     );
   }
 
+  /// Update a shared link
+  ///
+  /// Update an existing shared link by its ID.
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):

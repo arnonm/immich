@@ -1,10 +1,10 @@
 <script lang="ts">
   import { focusOutside } from '$lib/actions/focus-outside';
-  import Icon from '$lib/components/elements/icon.svelte';
   import ButtonContextMenu from '$lib/components/shared-components/context-menu/button-context-menu.svelte';
   import { AppRoute, QueryParameter } from '$lib/constants';
   import { getPeopleThumbnailUrl } from '$lib/utils';
   import { type PersonResponseDto } from '@immich/sdk';
+  import { Icon } from '@immich/ui';
   import {
     mdiAccountMultipleCheckOutline,
     mdiCalendarEditOutline,
@@ -52,22 +52,23 @@
         title={person.name}
         widthStyle="100%"
         circle
+        preload={false}
       />
       {#if person.isFavorite}
         <div class="absolute top-4 start-4">
-          <Icon path={mdiHeart} size="24" class="text-white" />
+          <Icon icon={mdiHeart} size="24" class="text-white" />
         </div>
       {/if}
     </div>
   </a>
 
   {#if showVerticalDots}
-    <div class="absolute top-2 end-2 z-[1]">
+    <div class="absolute top-2 end-2 z-1">
       <ButtonContextMenu
-        buttonClass="icon-white-drop-shadow focus:opacity-100 {showVerticalDots ? 'opacity-100' : 'opacity-0'}"
-        color="opaque"
-        padding="2"
-        size="20"
+        buttonClass="icon-white-drop-shadow"
+        color="secondary"
+        size="medium"
+        variant="filled"
         icon={mdiDotsVertical}
         title={$t('show_person_options')}
       >

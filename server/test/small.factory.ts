@@ -1,30 +1,40 @@
-import { randomUUID } from 'node:crypto';
 import {
   Activity,
   ApiKey,
   AuthApiKey,
   AuthSharedLink,
   AuthUser,
+  Exif,
   Library,
   Memory,
   Partner,
   Session,
-  SidecarWriteAsset,
   User,
   UserAdmin,
 } from 'src/database';
 import { MapAsset } from 'src/dtos/asset-response.dto';
 import { AuthDto } from 'src/dtos/auth.dto';
-import { AssetStatus, AssetType, AssetVisibility, MemoryType, Permission, UserStatus } from 'src/enum';
-import { OnThisDayData } from 'src/types';
+import { QueueStatisticsDto } from 'src/dtos/queue.dto';
+import {
+  AssetFileType,
+  AssetStatus,
+  AssetType,
+  AssetVisibility,
+  MemoryType,
+  Permission,
+  UserMetadataKey,
+  UserStatus,
+} from 'src/enum';
+import { OnThisDayData, UserMetadataItem } from 'src/types';
+import { v4, v7 } from 'uuid';
 
-export const newUuid = () => randomUUID() as string;
+export const newUuid = () => v4();
 export const newUuids = () =>
   Array.from({ length: 100 })
     .fill(0)
     .map(() => newUuid());
 export const newDate = () => new Date();
-export const newUpdateId = () => 'uuid-v7';
+export const newUuidV7 = () => v7();
 export const newSha1 = () => Buffer.from('this is a fake hash');
 export const newEmbedding = () => {
   const embedding = Array.from({ length: 512 })
@@ -58,7 +68,10 @@ const authFactory = ({
   }
 
   if (session) {
-    auth.session = { id: session.id };
+    auth.session = {
+      id: session.id,
+      hasElevatedPermission: false,
+    };
   }
 
   if (sharedLink) {
@@ -84,7 +97,7 @@ const authSharedLinkFactory = (sharedLink: Partial<AuthSharedLink> = {}) => {
 
 const authApiKeyFactory = (apiKey: Partial<AuthApiKey> = {}) => ({
   id: newUuid(),
-  permissions: [Permission.ALL],
+  permissions: [Permission.All],
   ...apiKey,
 });
 
@@ -110,9 +123,10 @@ const partnerFactory = (partner: Partial<Partner> = {}) => {
     sharedBy,
     sharedWithId: sharedWith.id,
     sharedWith,
+    createId: newUuidV7(),
     createdAt: newDate(),
     updatedAt: newDate(),
-    updateId: newUpdateId(),
+    updateId: newUuidV7(),
     inTimeline: true,
     ...partner,
   };
@@ -122,12 +136,27 @@ const sessionFactory = (session: Partial<Session> = {}) => ({
   id: newUuid(),
   createdAt: newDate(),
   updatedAt: newDate(),
-  updateId: newUpdateId(),
+  updateId: newUuidV7(),
   deviceOS: 'android',
   deviceType: 'mobile',
   token: 'abc123',
+  parentId: null,
+  expiresAt: null,
   userId: newUuid(),
+  pinExpiresAt: newDate(),
+  isPendingSyncReset: false,
+  appVersion: session.appVersion ?? null,
   ...session,
+});
+
+const queueStatisticsFactory = (dto?: Partial<QueueStatisticsDto>) => ({
+  active: 0,
+  completed: 0,
+  failed: 0,
+  delayed: 0,
+  waiting: 0,
+  paused: 0,
+  ...dto,
 });
 
 const stackFactory = () => ({
@@ -143,6 +172,12 @@ const userFactory = (user: Partial<User> = {}) => ({
   avatarColor: null,
   profileImagePath: '',
   profileChangedAt: newDate(),
+  metadata: [
+    {
+      key: UserMetadataKey.Onboarding,
+      value: 'true',
+    },
+  ] as UserMetadataItem[],
   ...user,
 });
 
@@ -163,7 +198,7 @@ const userAdminFactory = (user: Partial<UserAdmin> = {}) => {
     oauthId = '',
     quotaSizeInBytes = null,
     quotaUsageInBytes = 0,
-    status = UserStatus.ACTIVE,
+    status = UserStatus.Active,
     metadata = [],
   } = user;
   return {
@@ -192,8 +227,8 @@ const assetFactory = (asset: Partial<MapAsset> = {}) => ({
   createdAt: newDate(),
   updatedAt: newDate(),
   deletedAt: null,
-  updateId: newUpdateId(),
-  status: AssetStatus.ACTIVE,
+  updateId: newUuidV7(),
+  status: AssetStatus.Active,
   checksum: newSha1(),
   deviceAssetId: '',
   deviceId: '',
@@ -209,13 +244,12 @@ const assetFactory = (asset: Partial<MapAsset> = {}) => ({
   livePhotoVideoId: null,
   localDateTime: newDate(),
   originalFileName: 'IMG_123.jpg',
-  originalPath: `upload/12/34/IMG_123.jpg`,
+  originalPath: `/data/12/34/IMG_123.jpg`,
   ownerId: newUuid(),
-  sidecarPath: null,
   stackId: null,
   thumbhash: null,
-  type: AssetType.IMAGE,
-  visibility: AssetVisibility.TIMELINE,
+  type: AssetType.Image,
+  visibility: AssetVisibility.Timeline,
   ...asset,
 });
 
@@ -231,7 +265,7 @@ const activityFactory = (activity: Partial<Activity> = {}) => {
     albumId: newUuid(),
     createdAt: newDate(),
     updatedAt: newDate(),
-    updateId: newUpdateId(),
+    updateId: newUuidV7(),
     ...activity,
   };
 };
@@ -241,9 +275,9 @@ const apiKeyFactory = (apiKey: Partial<ApiKey> = {}) => ({
   userId: newUuid(),
   createdAt: newDate(),
   updatedAt: newDate(),
-  updateId: newUpdateId(),
+  updateId: newUuidV7(),
   name: 'Api Key',
-  permissions: [Permission.ALL],
+  permissions: [Permission.All],
   ...apiKey,
 });
 
@@ -251,7 +285,7 @@ const libraryFactory = (library: Partial<Library> = {}) => ({
   id: newUuid(),
   createdAt: newDate(),
   updatedAt: newDate(),
-  updateId: newUpdateId(),
+  updateId: newUuidV7(),
   deletedAt: null,
   refreshedAt: null,
   name: 'Library',
@@ -266,10 +300,10 @@ const memoryFactory = (memory: Partial<Memory> = {}) => ({
   id: newUuid(),
   createdAt: newDate(),
   updatedAt: newDate(),
-  updateId: newUpdateId(),
+  updateId: newUuidV7(),
   deletedAt: null,
   ownerId: newUuid(),
-  type: MemoryType.ON_THIS_DAY,
+  type: MemoryType.OnThisDay,
   data: { year: 2024 } as OnThisDayData,
   isSaved: false,
   memoryAt: newDate(),
@@ -286,24 +320,74 @@ const versionHistoryFactory = () => ({
   version: '1.123.45',
 });
 
-const assetSidecarWriteFactory = (asset: Partial<SidecarWriteAsset> = {}) => ({
+const assetSidecarWriteFactory = () => {
+  const id = newUuid();
+  return {
+    id,
+    originalPath: '/path/to/original-path.jpg.xmp',
+    tags: [],
+    files: [
+      {
+        id: newUuid(),
+        path: '/path/to/original-path.jpg.xmp',
+        type: AssetFileType.Sidecar,
+      },
+    ],
+    exifInfo: {
+      assetId: id,
+      description: 'this is a description',
+      latitude: 12,
+      longitude: 12,
+      dateTimeOriginal: '2023-11-22T04:56:12.196Z',
+    } as unknown as Exif,
+  };
+};
+
+const assetOcrFactory = (
+  ocr: {
+    id?: string;
+    assetId?: string;
+    x1?: number;
+    y1?: number;
+    x2?: number;
+    y2?: number;
+    x3?: number;
+    y3?: number;
+    x4?: number;
+    y4?: number;
+    boxScore?: number;
+    textScore?: number;
+    text?: string;
+  } = {},
+) => ({
   id: newUuid(),
-  sidecarPath: '/path/to/original-path.jpg.xmp',
-  originalPath: '/path/to/original-path.jpg.xmp',
-  tags: [],
-  ...asset,
+  assetId: newUuid(),
+  x1: 0.1,
+  y1: 0.2,
+  x2: 0.3,
+  y2: 0.2,
+  x3: 0.3,
+  y3: 0.4,
+  x4: 0.1,
+  y4: 0.4,
+  boxScore: 0.95,
+  textScore: 0.92,
+  text: 'Sample Text',
+  ...ocr,
 });
 
 export const factory = {
   activity: activityFactory,
   apiKey: apiKeyFactory,
   asset: assetFactory,
+  assetOcr: assetOcrFactory,
   auth: authFactory,
   authApiKey: authApiKeyFactory,
   authUser: authUserFactory,
   library: libraryFactory,
   memory: memoryFactory,
   partner: partnerFactory,
+  queueStatistics: queueStatisticsFactory,
   session: sessionFactory,
   stack: stackFactory,
   user: userFactory,

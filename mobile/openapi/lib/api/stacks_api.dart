@@ -16,7 +16,12 @@ class StacksApi {
 
   final ApiClient apiClient;
 
-  /// Performs an HTTP 'POST /stacks' operation and returns the [Response].
+  /// Create a stack
+  ///
+  /// Create a new stack by providing a name and a list of asset IDs to include in the stack. If any of the provided asset IDs are primary assets of an existing stack, the existing stack will be merged into the newly created stack.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [StackCreateDto] stackCreateDto (required):
@@ -45,6 +50,10 @@ class StacksApi {
     );
   }
 
+  /// Create a stack
+  ///
+  /// Create a new stack by providing a name and a list of asset IDs to include in the stack. If any of the provided asset IDs are primary assets of an existing stack, the existing stack will be merged into the newly created stack.
+  ///
   /// Parameters:
   ///
   /// * [StackCreateDto] stackCreateDto (required):
@@ -63,7 +72,12 @@ class StacksApi {
     return null;
   }
 
-  /// Performs an HTTP 'DELETE /stacks/{id}' operation and returns the [Response].
+  /// Delete a stack
+  ///
+  /// Delete a specific stack by its ID.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -93,6 +107,10 @@ class StacksApi {
     );
   }
 
+  /// Delete a stack
+  ///
+  /// Delete a specific stack by its ID.
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -103,7 +121,12 @@ class StacksApi {
     }
   }
 
-  /// Performs an HTTP 'DELETE /stacks' operation and returns the [Response].
+  /// Delete stacks
+  ///
+  /// Delete multiple stacks by providing a list of stack IDs.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [BulkIdsDto] bulkIdsDto (required):
@@ -132,6 +155,10 @@ class StacksApi {
     );
   }
 
+  /// Delete stacks
+  ///
+  /// Delete multiple stacks by providing a list of stack IDs.
+  ///
   /// Parameters:
   ///
   /// * [BulkIdsDto] bulkIdsDto (required):
@@ -142,7 +169,12 @@ class StacksApi {
     }
   }
 
-  /// Performs an HTTP 'GET /stacks/{id}' operation and returns the [Response].
+  /// Retrieve a stack
+  ///
+  /// Retrieve a specific stack by its ID.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -172,6 +204,10 @@ class StacksApi {
     );
   }
 
+  /// Retrieve a stack
+  ///
+  /// Retrieve a specific stack by its ID.
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -190,7 +226,66 @@ class StacksApi {
     return null;
   }
 
-  /// Performs an HTTP 'GET /stacks' operation and returns the [Response].
+  /// Remove an asset from a stack
+  ///
+  /// Remove a specific asset from a stack by providing the stack ID and asset ID.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
+  /// Parameters:
+  ///
+  /// * [String] assetId (required):
+  ///
+  /// * [String] id (required):
+  Future<Response> removeAssetFromStackWithHttpInfo(String assetId, String id,) async {
+    // ignore: prefer_const_declarations
+    final apiPath = r'/stacks/{id}/assets/{assetId}'
+      .replaceAll('{assetId}', assetId)
+      .replaceAll('{id}', id);
+
+    // ignore: prefer_final_locals
+    Object? postBody;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+    const contentTypes = <String>[];
+
+
+    return apiClient.invokeAPI(
+      apiPath,
+      'DELETE',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+    );
+  }
+
+  /// Remove an asset from a stack
+  ///
+  /// Remove a specific asset from a stack by providing the stack ID and asset ID.
+  ///
+  /// Parameters:
+  ///
+  /// * [String] assetId (required):
+  ///
+  /// * [String] id (required):
+  Future<void> removeAssetFromStack(String assetId, String id,) async {
+    final response = await removeAssetFromStackWithHttpInfo(assetId, id,);
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+  }
+
+  /// Retrieve stacks
+  ///
+  /// Retrieve a list of stacks.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [String] primaryAssetId:
@@ -223,6 +318,10 @@ class StacksApi {
     );
   }
 
+  /// Retrieve stacks
+  ///
+  /// Retrieve a list of stacks.
+  ///
   /// Parameters:
   ///
   /// * [String] primaryAssetId:
@@ -244,7 +343,12 @@ class StacksApi {
     return null;
   }
 
-  /// Performs an HTTP 'PUT /stacks/{id}' operation and returns the [Response].
+  /// Update a stack
+  ///
+  /// Update an existing stack by its ID.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -276,6 +380,10 @@ class StacksApi {
     );
   }
 
+  /// Update a stack
+  ///
+  /// Update an existing stack by its ID.
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):

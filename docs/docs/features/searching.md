@@ -5,7 +5,7 @@ import TabItem from '@theme/TabItem';
 
 Immich uses Postgres as its search database for both metadata and contextual CLIP search.
 
-Contextual CLIP search is powered by the [pgvecto.rs](https://github.com/tensorchord/pgvecto.rs) extension, utilizing machine learning models like [CLIP](https://openai.com/research/clip) to provide relevant search results. This allows for freeform searches without requiring specific keywords in the image or video metadata.
+Contextual CLIP search is powered by the [VectorChord](https://github.com/tensorchord/VectorChord) extension, utilizing machine learning models like [CLIP](https://openai.com/research/clip) to provide relevant search results. This allows for freeform searches without requiring specific keywords in the image or video metadata.
 
 ## Advanced Search Filters
 
@@ -1222,4 +1222,4 @@ Feel free to make a feature request if there's a model you want to use that we d
 [huggingface-clip]: https://huggingface.co/collections/immich-app/clip-654eaefb077425890874cd07
 [huggingface-multilingual-clip]: https://huggingface.co/collections/immich-app/multilingual-clip-654eb08c2382f591eeb8c2a7
 [smart-search-settings]: https://my.immich.app/admin/system-settings?isOpen=machine-learning+smart-search
-[job-status-page]: https://my.immich.app/admin/jobs-status
+[job-status-page]: https://my.immich.app/admin/queues

@@ -13,6 +13,7 @@ part of openapi.api;
 class MetadataSearchDto {
   /// Returns a new [MetadataSearchDto] instance.
   MetadataSearchDto({
+    this.albumIds = const [],
     this.checksum,
     this.city,
     this.country,
@@ -32,6 +33,7 @@ class MetadataSearchDto {
     this.libraryId,
     this.make,
     this.model,
+    this.ocr,
     this.order = AssetOrder.desc,
     this.originalFileName,
     this.originalPath,
@@ -56,6 +58,8 @@ class MetadataSearchDto {
     this.withPeople,
     this.withStacked,
   });
+
+  List<String> albumIds;
 
   ///
   /// Please note: This property should have been non-nullable! Since the specification file
@@ -179,6 +183,14 @@ class MetadataSearchDto {
 
   String? model;
 
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  String? ocr;
+
   AssetOrder order;
 
   ///
@@ -238,7 +250,7 @@ class MetadataSearchDto {
 
   String? state;
 
-  List<String> tagIds;
+  List<String>? tagIds;
 
   ///
   /// Please note: This property should have been non-nullable! Since the specification file
@@ -346,6 +358,7 @@ class MetadataSearchDto {
 
   @override
   bool operator ==(Object other) => identical(this, other) || other is MetadataSearchDto &&
+    _deepEquality.equals(other.albumIds, albumIds) &&
     other.checksum == checksum &&
     other.city == city &&
     other.country == country &&
@@ -365,6 +378,7 @@ class MetadataSearchDto {
     other.libraryId == libraryId &&
     other.make == make &&
     other.model == model &&
+    other.ocr == ocr &&
     other.order == order &&
     other.originalFileName == originalFileName &&
     other.originalPath == originalPath &&
@@ -392,6 +406,7 @@ class MetadataSearchDto {
   @override
   int get hashCode =>
     // ignore: unnecessary_parenthesis
+    (albumIds.hashCode) +
     (checksum == null ? 0 : checksum!.hashCode) +
     (city == null ? 0 : city!.hashCode) +
     (country == null ? 0 : country!.hashCode) +
@@ -411,6 +426,7 @@ class MetadataSearchDto {
     (libraryId == null ? 0 : libraryId!.hashCode) +
     (make == null ? 0 : make!.hashCode) +
     (model == null ? 0 : model!.hashCode) +
+    (ocr == null ? 0 : ocr!.hashCode) +
     (order.hashCode) +
     (originalFileName == null ? 0 : originalFileName!.hashCode) +
     (originalPath == null ? 0 : originalPath!.hashCode) +
@@ -420,7 +436,7 @@ class MetadataSearchDto {
     (rating == null ? 0 : rating!.hashCode) +
     (size == null ? 0 : size!.hashCode) +
     (state == null ? 0 : state!.hashCode) +
-    (tagIds.hashCode) +
+    (tagIds == null ? 0 : tagIds!.hashCode) +
     (takenAfter == null ? 0 : takenAfter!.hashCode) +
     (takenBefore == null ? 0 : takenBefore!.hashCode) +
     (thumbnailPath == null ? 0 : thumbnailPath!.hashCode) +
@@ -436,10 +452,11 @@ class MetadataSearchDto {
     (withStacked == null ? 0 : withStacked!.hashCode);
 
   @override
-  String toString() => 'MetadataSearchDto[checksum=$checksum, city=$city, country=$country, createdAfter=$createdAfter, createdBefore=$createdBefore, description=$description, deviceAssetId=$deviceAssetId, deviceId=$deviceId, encodedVideoPath=$encodedVideoPath, id=$id, isEncoded=$isEncoded, isFavorite=$isFavorite, isMotion=$isMotion, isNotInAlbum=$isNotInAlbum, isOffline=$isOffline, lensModel=$lensModel, libraryId=$libraryId, make=$make, model=$model, order=$order, originalFileName=$originalFileName, originalPath=$originalPath, page=$page, personIds=$personIds, previewPath=$previewPath, rating=$rating, size=$size, state=$state, tagIds=$tagIds, takenAfter=$takenAfter, takenBefore=$takenBefore, thumbnailPath=$thumbnailPath, trashedAfter=$trashedAfter, trashedBefore=$trashedBefore, type=$type, updatedAfter=$updatedAfter, updatedBefore=$updatedBefore, visibility=$visibility, withDeleted=$withDeleted, withExif=$withExif, withPeople=$withPeople, withStacked=$withStacked]';
+  String toString() => 'MetadataSearchDto[albumIds=$albumIds, checksum=$checksum, city=$city, country=$country, createdAfter=$createdAfter, createdBefore=$createdBefore, description=$description, deviceAssetId=$deviceAssetId, deviceId=$deviceId, encodedVideoPath=$encodedVideoPath, id=$id, isEncoded=$isEncoded, isFavorite=$isFavorite, isMotion=$isMotion, isNotInAlbum=$isNotInAlbum, isOffline=$isOffline, lensModel=$lensModel, libraryId=$libraryId, make=$make, model=$model, ocr=$ocr, order=$order, originalFileName=$originalFileName, originalPath=$originalPath, page=$page, personIds=$personIds, previewPath=$previewPath, rating=$rating, size=$size, state=$state, tagIds=$tagIds, takenAfter=$takenAfter, takenBefore=$takenBefore, thumbnailPath=$thumbnailPath, trashedAfter=$trashedAfter, trashedBefore=$trashedBefore, type=$type, updatedAfter=$updatedAfter, updatedBefore=$updatedBefore, visibility=$visibility, withDeleted=$withDeleted, withExif=$withExif, withPeople=$withPeople, withStacked=$withStacked]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
+      json[r'albumIds'] = this.albumIds;
     if (this.checksum != null) {
       json[r'checksum'] = this.checksum;
     } else {
@@ -535,6 +552,11 @@ class MetadataSearchDto {
     } else {
     //  json[r'model'] = null;
     }
+    if (this.ocr != null) {
+      json[r'ocr'] = this.ocr;
+    } else {
+    //  json[r'ocr'] = null;
+    }
       json[r'order'] = this.order;
     if (this.originalFileName != null) {
       json[r'originalFileName'] = this.originalFileName;
@@ -572,7 +594,11 @@ class MetadataSearchDto {
     } else {
     //  json[r'state'] = null;
     }
+    if (this.tagIds != null) {
       json[r'tagIds'] = this.tagIds;
+    } else {
+    //  json[r'tagIds'] = null;
+    }
     if (this.takenAfter != null) {
       json[r'takenAfter'] = this.takenAfter!.toUtc().toIso8601String();
     } else {
@@ -650,6 +676,9 @@ class MetadataSearchDto {
       final json = value.cast<String, dynamic>();
 
       return MetadataSearchDto(
+        albumIds: json[r'albumIds'] is Iterable
+            ? (json[r'albumIds'] as Iterable).cast<String>().toList(growable: false)
+            : const [],
         checksum: mapValueOfType<String>(json, r'checksum'),
         city: mapValueOfType<String>(json, r'city'),
         country: mapValueOfType<String>(json, r'country'),
@@ -669,6 +698,7 @@ class MetadataSearchDto {
         libraryId: mapValueOfType<String>(json, r'libraryId'),
         make: mapValueOfType<String>(json, r'make'),
         model: mapValueOfType<String>(json, r'model'),
+        ocr: mapValueOfType<String>(json, r'ocr'),
         order: AssetOrder.fromJson(json[r'order']) ?? AssetOrder.desc,
         originalFileName: mapValueOfType<String>(json, r'originalFileName'),
         originalPath: mapValueOfType<String>(json, r'originalPath'),

@@ -66,7 +66,7 @@ describe(SearchController.name, () => {
         .send({ visibility: 'immich' });
       expect(status).toBe(400);
       expect(body).toEqual(
-        errorDto.badRequest(['visibility must be one of the following values: archive, timeline, hidden']),
+        errorDto.badRequest(['visibility must be one of the following values: archive, timeline, hidden, locked']),
       );
     });
 
@@ -127,12 +127,6 @@ describe(SearchController.name, () => {
       it('should be an authenticated route', async () => {
         await request(ctx.getHttpServer()).post('/search/smart');
         expect(ctx.authenticate).toHaveBeenCalled();
-      });
-
-      it('should require a query', async () => {
-        const { status, body } = await request(ctx.getHttpServer()).post('/search/smart').send({});
-        expect(status).toBe(400);
-        expect(body).toEqual(errorDto.badRequest(['query should not be empty', 'query must be a string']));
       });
     });
 

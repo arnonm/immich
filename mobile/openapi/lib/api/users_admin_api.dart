@@ -16,7 +16,12 @@ class UsersAdminApi {
 
   final ApiClient apiClient;
 
-  /// Performs an HTTP 'POST /admin/users' operation and returns the [Response].
+  /// Create a user
+  ///
+  /// Create a new user.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [UserAdminCreateDto] userAdminCreateDto (required):
@@ -45,6 +50,10 @@ class UsersAdminApi {
     );
   }
 
+  /// Create a user
+  ///
+  /// Create a new user.
+  ///
   /// Parameters:
   ///
   /// * [UserAdminCreateDto] userAdminCreateDto (required):
@@ -63,7 +72,12 @@ class UsersAdminApi {
     return null;
   }
 
-  /// Performs an HTTP 'DELETE /admin/users/{id}' operation and returns the [Response].
+  /// Delete a user
+  ///
+  /// Delete a user.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -95,6 +109,10 @@ class UsersAdminApi {
     );
   }
 
+  /// Delete a user
+  ///
+  /// Delete a user.
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -115,7 +133,12 @@ class UsersAdminApi {
     return null;
   }
 
-  /// Performs an HTTP 'GET /admin/users/{id}' operation and returns the [Response].
+  /// Retrieve a user
+  ///
+  /// Retrieve  a specific user by their ID.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -145,6 +168,10 @@ class UsersAdminApi {
     );
   }
 
+  /// Retrieve a user
+  ///
+  /// Retrieve  a specific user by their ID.
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -163,7 +190,12 @@ class UsersAdminApi {
     return null;
   }
 
-  /// Performs an HTTP 'GET /admin/users/{id}/preferences' operation and returns the [Response].
+  /// Retrieve user preferences
+  ///
+  /// Retrieve the preferences of a specific user.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -193,6 +225,10 @@ class UsersAdminApi {
     );
   }
 
+  /// Retrieve user preferences
+  ///
+  /// Retrieve the preferences of a specific user.
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -211,7 +247,72 @@ class UsersAdminApi {
     return null;
   }
 
-  /// Performs an HTTP 'GET /admin/users/{id}/statistics' operation and returns the [Response].
+  /// Retrieve user sessions
+  ///
+  /// Retrieve all sessions for a specific user.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
+  /// Parameters:
+  ///
+  /// * [String] id (required):
+  Future<Response> getUserSessionsAdminWithHttpInfo(String id,) async {
+    // ignore: prefer_const_declarations
+    final apiPath = r'/admin/users/{id}/sessions'
+      .replaceAll('{id}', id);
+
+    // ignore: prefer_final_locals
+    Object? postBody;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+    const contentTypes = <String>[];
+
+
+    return apiClient.invokeAPI(
+      apiPath,
+      'GET',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+    );
+  }
+
+  /// Retrieve user sessions
+  ///
+  /// Retrieve all sessions for a specific user.
+  ///
+  /// Parameters:
+  ///
+  /// * [String] id (required):
+  Future<List<SessionResponseDto>?> getUserSessionsAdmin(String id,) async {
+    final response = await getUserSessionsAdminWithHttpInfo(id,);
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+    // When a remote server returns no body with a status of 204, we shall not decode it.
+    // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
+    // FormatException when trying to decode an empty string.
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      final responseBody = await _decodeBodyBytes(response);
+      return (await apiClient.deserializeAsync(responseBody, 'List<SessionResponseDto>') as List)
+        .cast<SessionResponseDto>()
+        .toList(growable: false);
+
+    }
+    return null;
+  }
+
+  /// Retrieve user statistics
+  ///
+  /// Retrieve asset statistics for a specific user.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -257,6 +358,10 @@ class UsersAdminApi {
     );
   }
 
+  /// Retrieve user statistics
+  ///
+  /// Retrieve asset statistics for a specific user.
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -281,7 +386,12 @@ class UsersAdminApi {
     return null;
   }
 
-  /// Performs an HTTP 'POST /admin/users/{id}/restore' operation and returns the [Response].
+  /// Restore a deleted user
+  ///
+  /// Restore a previously deleted user.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -311,6 +421,10 @@ class UsersAdminApi {
     );
   }
 
+  /// Restore a deleted user
+  ///
+  /// Restore a previously deleted user.
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -329,7 +443,12 @@ class UsersAdminApi {
     return null;
   }
 
-  /// Performs an HTTP 'GET /admin/users' operation and returns the [Response].
+  /// Search users
+  ///
+  /// Search for users.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [String] id:
@@ -367,6 +486,10 @@ class UsersAdminApi {
     );
   }
 
+  /// Search users
+  ///
+  /// Search for users.
+  ///
   /// Parameters:
   ///
   /// * [String] id:
@@ -390,7 +513,12 @@ class UsersAdminApi {
     return null;
   }
 
-  /// Performs an HTTP 'PUT /admin/users/{id}' operation and returns the [Response].
+  /// Update a user
+  ///
+  /// Update an existing user.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -422,6 +550,10 @@ class UsersAdminApi {
     );
   }
 
+  /// Update a user
+  ///
+  /// Update an existing user.
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -442,7 +574,12 @@ class UsersAdminApi {
     return null;
   }
 
-  /// Performs an HTTP 'PUT /admin/users/{id}/preferences' operation and returns the [Response].
+  /// Update user preferences
+  ///
+  /// Update the preferences of a specific user.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -474,6 +611,10 @@ class UsersAdminApi {
     );
   }
 
+  /// Update user preferences
+  ///
+  /// Update the preferences of a specific user.
+  ///
   /// Parameters:
   ///
   /// * [String] id (required):

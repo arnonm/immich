@@ -16,7 +16,12 @@ class SyncApi {
 
   final ApiClient apiClient;
 
-  /// Performs an HTTP 'DELETE /sync/ack' operation and returns the [Response].
+  /// Delete acknowledgements
+  ///
+  /// Delete specific synchronization acknowledgments.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [SyncAckDeleteDto] syncAckDeleteDto (required):
@@ -45,6 +50,10 @@ class SyncApi {
     );
   }
 
+  /// Delete acknowledgements
+  ///
+  /// Delete specific synchronization acknowledgments.
+  ///
   /// Parameters:
   ///
   /// * [SyncAckDeleteDto] syncAckDeleteDto (required):
@@ -55,7 +64,12 @@ class SyncApi {
     }
   }
 
-  /// Performs an HTTP 'POST /sync/delta-sync' operation and returns the [Response].
+  /// Get delta sync for user
+  ///
+  /// Retrieve changed assets since the last sync for the authenticated user.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [AssetDeltaSyncDto] assetDeltaSyncDto (required):
@@ -84,6 +98,10 @@ class SyncApi {
     );
   }
 
+  /// Get delta sync for user
+  ///
+  /// Retrieve changed assets since the last sync for the authenticated user.
+  ///
   /// Parameters:
   ///
   /// * [AssetDeltaSyncDto] assetDeltaSyncDto (required):
@@ -102,7 +120,12 @@ class SyncApi {
     return null;
   }
 
-  /// Performs an HTTP 'POST /sync/full-sync' operation and returns the [Response].
+  /// Get full sync for user
+  ///
+  /// Retrieve all assets for a full synchronization for the authenticated user.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [AssetFullSyncDto] assetFullSyncDto (required):
@@ -131,6 +154,10 @@ class SyncApi {
     );
   }
 
+  /// Get full sync for user
+  ///
+  /// Retrieve all assets for a full synchronization for the authenticated user.
+  ///
   /// Parameters:
   ///
   /// * [AssetFullSyncDto] assetFullSyncDto (required):
@@ -152,7 +179,11 @@ class SyncApi {
     return null;
   }
 
-  /// Performs an HTTP 'GET /sync/ack' operation and returns the [Response].
+  /// Retrieve acknowledgements
+  ///
+  /// Retrieve the synchronization acknowledgments for the current session.
+  ///
+  /// Note: This method returns the HTTP [Response].
   Future<Response> getSyncAckWithHttpInfo() async {
     // ignore: prefer_const_declarations
     final apiPath = r'/sync/ack';
@@ -178,6 +209,9 @@ class SyncApi {
     );
   }
 
+  /// Retrieve acknowledgements
+  ///
+  /// Retrieve the synchronization acknowledgments for the current session.
   Future<List<SyncAckDto>?> getSyncAck() async {
     final response = await getSyncAckWithHttpInfo();
     if (response.statusCode >= HttpStatus.badRequest) {
@@ -196,7 +230,12 @@ class SyncApi {
     return null;
   }
 
-  /// Performs an HTTP 'POST /sync/stream' operation and returns the [Response].
+  /// Stream sync changes
+  ///
+  /// Retrieve a JSON lines streamed response of changes for synchronization. This endpoint is used by the mobile app to efficiently stay up to date with changes.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [SyncStreamDto] syncStreamDto (required):
@@ -225,6 +264,10 @@ class SyncApi {
     );
   }
 
+  /// Stream sync changes
+  ///
+  /// Retrieve a JSON lines streamed response of changes for synchronization. This endpoint is used by the mobile app to efficiently stay up to date with changes.
+  ///
   /// Parameters:
   ///
   /// * [SyncStreamDto] syncStreamDto (required):
@@ -235,7 +278,12 @@ class SyncApi {
     }
   }
 
-  /// Performs an HTTP 'POST /sync/ack' operation and returns the [Response].
+  /// Acknowledge changes
+  ///
+  /// Send a list of synchronization acknowledgements to confirm that the latest changes have been received.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
   /// Parameters:
   ///
   /// * [SyncAckSetDto] syncAckSetDto (required):
@@ -264,6 +312,10 @@ class SyncApi {
     );
   }
 
+  /// Acknowledge changes
+  ///
+  /// Send a list of synchronization acknowledgements to confirm that the latest changes have been received.
+  ///
   /// Parameters:
   ///
   /// * [SyncAckSetDto] syncAckSetDto (required):

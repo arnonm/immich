@@ -4,16 +4,17 @@ import { IsArray, IsInt, IsNotEmpty, IsNumber, IsString, Max, Min, ValidateNeste
 import { Selectable } from 'kysely';
 import { DateTime } from 'luxon';
 import { AssetFace, Person } from 'src/database';
-import { AssetFaces } from 'src/db';
-import { PropertyLifecycle } from 'src/decorators';
+import { HistoryBuilder, Property } from 'src/decorators';
 import { AuthDto } from 'src/dtos/auth.dto';
 import { SourceType } from 'src/enum';
+import { AssetFaceTable } from 'src/schema/tables/asset-face.table';
 import { asDateString } from 'src/utils/date';
 import {
   IsDateStringFormat,
   MaxDateString,
   Optional,
   ValidateBoolean,
+  ValidateEnum,
   ValidateHexColor,
   ValidateUUID,
 } from 'src/validation';
@@ -33,7 +34,7 @@ export class PersonCreateDto {
   @ApiProperty({ format: 'date' })
   @MaxDateString(() => DateTime.now(), { message: 'Birth date cannot be in the future' })
   @IsDateStringFormat('yyyy-MM-dd')
-  @Optional({ nullable: true })
+  @Optional({ nullable: true, emptyToNull: true })
   birthDate?: Date | null;
 
   /**
@@ -54,8 +55,7 @@ export class PersonUpdateDto extends PersonCreateDto {
   /**
    * Asset is used to get the feature face thumbnail.
    */
-  @Optional()
-  @IsString()
+  @ValidateUUID({ optional: true })
   featureFaceAssetId?: string;
 }
 
@@ -111,11 +111,11 @@ export class PersonResponseDto {
   birthDate!: string | null;
   thumbnailPath!: string;
   isHidden!: boolean;
-  @PropertyLifecycle({ addedAt: 'v1.107.0' })
+  @Property({ history: new HistoryBuilder().added('v1.107.0').stable('v2') })
   updatedAt?: Date;
-  @PropertyLifecycle({ addedAt: 'v1.126.0' })
+  @Property({ history: new HistoryBuilder().added('v1.126.0').stable('v2') })
   isFavorite?: boolean;
-  @PropertyLifecycle({ addedAt: 'v1.126.0' })
+  @Property({ history: new HistoryBuilder().added('v1.126.0').stable('v2') })
   color?: string;
 }
 
@@ -138,7 +138,7 @@ export class AssetFaceWithoutPersonResponseDto {
   boundingBoxY1!: number;
   @ApiProperty({ type: 'integer' })
   boundingBoxY2!: number;
-  @ApiProperty({ enum: SourceType, enumName: 'SourceType' })
+  @ValidateEnum({ enum: SourceType, name: 'SourceType' })
   sourceType?: SourceType;
 }
 
@@ -216,7 +216,7 @@ export class PeopleResponseDto {
   people!: PersonResponseDto[];
 
   // TODO: make required after a few versions
-  @PropertyLifecycle({ addedAt: 'v1.110.0' })
+  @Property({ history: new HistoryBuilder().added('v1.110.0').stable('v2') })
   hasNextPage?: boolean;
 }
 
@@ -233,7 +233,7 @@ export function mapPerson(person: Person): PersonResponseDto {
   };
 }
 
-export function mapFacesWithoutPerson(face: Selectable<AssetFaces>): AssetFaceWithoutPersonResponseDto {
+export function mapFacesWithoutPerson(face: Selectable<AssetFaceTable>): AssetFaceWithoutPersonResponseDto {
   return {
     id: face.id,
     imageHeight: face.imageHeight,

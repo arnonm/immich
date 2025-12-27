@@ -8,35 +8,18 @@ select
   "duplicateId",
   "stackId",
   "visibility",
-  "smart_search"."embedding",
-  (
-    select
-      coalesce(json_agg(agg), '[]')
-    from
-      (
-        select
-          "asset_files"."id",
-          "asset_files"."path",
-          "asset_files"."type"
-        from
-          "asset_files"
-        where
-          "asset_files"."assetId" = "assets"."id"
-          and "asset_files"."type" = $1
-      ) as agg
-  ) as "files"
+  "smart_search"."embedding"
 from
-  "assets"
-  left join "smart_search" on "assets"."id" = "smart_search"."assetId"
+  "asset"
+  left join "smart_search" on "asset"."id" = "smart_search"."assetId"
 where
-  "assets"."id" = $2::uuid
+  "asset"."id" = $1::uuid
 limit
-  $3
+  $2
 
 -- AssetJobRepository.getForSidecarWriteJob
 select
   "id",
-  "sidecarPath",
   "originalPath",
   (
     select
@@ -44,234 +27,182 @@ select
     from
       (
         select
-          "tags"."value"
+          "asset_file"."id",
+          "asset_file"."path",
+          "asset_file"."type"
         from
-          "tags"
-          inner join "tag_asset" on "tags"."id" = "tag_asset"."tagsId"
+          "asset_file"
         where
-          "assets"."id" = "tag_asset"."assetsId"
+          "asset_file"."assetId" = "asset"."id"
+          and "asset_file"."type" = $1
       ) as agg
-  ) as "tags"
-from
-  "assets"
-where
-  "assets"."id" = $1::uuid
-limit
-  $2
-
--- AssetJobRepository.streamForThumbnailJob
-select
-  "assets"."id",
-  "assets"."thumbhash",
+  ) as "files",
   (
     select
       coalesce(json_agg(agg), '[]')
     from
       (
         select
-          "asset_files"."id",
-          "asset_files"."path",
-          "asset_files"."type"
+          "tag"."value"
         from
-          "asset_files"
+          "tag"
+          inner join "tag_asset" on "tag"."id" = "tag_asset"."tagId"
         where
-          "asset_files"."assetId" = "assets"."id"
+          "asset"."id" = "tag_asset"."assetId"
+      ) as agg
+  ) as "tags",
+  to_json("asset_exif") as "exifInfo"
+from
+  "asset"
+  inner join "asset_exif" on "asset"."id" = "asset_exif"."assetId"
+where
+  "asset"."id" = $2::uuid
+limit
+  $3
+
+-- AssetJobRepository.getForSidecarCheckJob
+select
+  "id",
+  "originalPath",
+  (
+    select
+      coalesce(json_agg(agg), '[]')
+    from
+      (
+        select
+          "asset_file"."id",
+          "asset_file"."path",
+          "asset_file"."type"
+        from
+          "asset_file"
+        where
+          "asset_file"."assetId" = "asset"."id"
+          and "asset_file"."type" = $1
       ) as agg
   ) as "files"
 from
-  "assets"
-  inner join "asset_job_status" on "asset_job_status"."assetId" = "assets"."id"
+  "asset"
 where
-  "assets"."deletedAt" is null
-  and "assets"."visibility" != $1
+  "asset"."id" = $2::uuid
+limit
+  $3
+
+-- AssetJobRepository.streamForThumbnailJob
+select
+  "asset"."id",
+  "asset"."thumbhash",
+  (
+    select
+      coalesce(json_agg(agg), '[]')
+    from
+      (
+        select
+          "asset_file"."id",
+          "asset_file"."path",
+          "asset_file"."type"
+        from
+          "asset_file"
+        where
+          "asset_file"."assetId" = "asset"."id"
+      ) as agg
+  ) as "files"
+from
+  "asset"
+  inner join "asset_job_status" on "asset_job_status"."assetId" = "asset"."id"
+where
+  "asset"."deletedAt" is null
+  and "asset"."visibility" != $1
   and (
     "asset_job_status"."previewAt" is null
     or "asset_job_status"."thumbnailAt" is null
-    or "assets"."thumbhash" is null
+    or "asset"."thumbhash" is null
   )
 
 -- AssetJobRepository.getForMigrationJob
 select
-  "assets"."id",
-  "assets"."ownerId",
-  "assets"."encodedVideoPath",
+  "asset"."id",
+  "asset"."ownerId",
+  "asset"."encodedVideoPath",
   (
     select
       coalesce(json_agg(agg), '[]')
     from
       (
         select
-          "asset_files"."id",
-          "asset_files"."path",
-          "asset_files"."type"
+          "asset_file"."id",
+          "asset_file"."path",
+          "asset_file"."type"
         from
-          "asset_files"
+          "asset_file"
         where
-          "asset_files"."assetId" = "assets"."id"
+          "asset_file"."assetId" = "asset"."id"
       ) as agg
   ) as "files"
 from
-  "assets"
+  "asset"
 where
-  "assets"."id" = $1
+  "asset"."id" = $1
 
 -- AssetJobRepository.getForGenerateThumbnailJob
 select
-  "assets"."id",
-  "assets"."visibility",
-  "assets"."originalFileName",
-  "assets"."originalPath",
-  "assets"."ownerId",
-  "assets"."thumbhash",
-  "assets"."type",
+  "asset"."id",
+  "asset"."visibility",
+  "asset"."originalFileName",
+  "asset"."originalPath",
+  "asset"."ownerId",
+  "asset"."thumbhash",
+  "asset"."type",
   (
     select
       coalesce(json_agg(agg), '[]')
     from
       (
         select
-          "asset_files"."id",
-          "asset_files"."path",
-          "asset_files"."type"
+          "asset_file"."id",
+          "asset_file"."path",
+          "asset_file"."type"
         from
-          "asset_files"
+          "asset_file"
         where
-          "asset_files"."assetId" = "assets"."id"
+          "asset_file"."assetId" = "asset"."id"
       ) as agg
   ) as "files",
-  to_json("exif") as "exifInfo"
+  to_json("asset_exif") as "exifInfo"
 from
-  "assets"
-  inner join "exif" on "assets"."id" = "exif"."assetId"
+  "asset"
+  inner join "asset_exif" on "asset"."id" = "asset_exif"."assetId"
 where
-  "assets"."id" = $1
+  "asset"."id" = $1
 
 -- AssetJobRepository.getForMetadataExtraction
 select
-  "assets"."id",
-  "assets"."checksum",
-  "assets"."deviceAssetId",
-  "assets"."deviceId",
-  "assets"."fileCreatedAt",
-  "assets"."fileModifiedAt",
-  "assets"."isExternal",
-  "assets"."visibility",
-  "assets"."libraryId",
-  "assets"."livePhotoVideoId",
-  "assets"."localDateTime",
-  "assets"."originalFileName",
-  "assets"."originalPath",
-  "assets"."ownerId",
-  "assets"."sidecarPath",
-  "assets"."type",
+  "asset"."id",
+  "asset"."checksum",
+  "asset"."deviceAssetId",
+  "asset"."deviceId",
+  "asset"."fileCreatedAt",
+  "asset"."fileModifiedAt",
+  "asset"."isExternal",
+  "asset"."visibility",
+  "asset"."libraryId",
+  "asset"."livePhotoVideoId",
+  "asset"."localDateTime",
+  "asset"."originalFileName",
+  "asset"."originalPath",
+  "asset"."ownerId",
+  "asset"."type",
   (
     select
       coalesce(json_agg(agg), '[]')
     from
       (
         select
-          "asset_faces".*
+          "asset_face".*
         from
-          "asset_faces"
+          "asset_face"
         where
-          "asset_faces"."assetId" = "assets"."id"
-          and "asset_faces"."deletedAt" is null
-      ) as agg
-  ) as "faces"
-from
-  "assets"
-where
-  "assets"."id" = $1
-
--- AssetJobRepository.getAlbumThumbnailFiles
-select
-  "asset_files"."id",
-  "asset_files"."path",
-  "asset_files"."type"
-from
-  "asset_files"
-where
-  "asset_files"."assetId" = $1
-  and "asset_files"."type" = $2
-
--- AssetJobRepository.streamForSearchDuplicates
-select
-  "assets"."id"
-from
-  "assets"
-  inner join "asset_job_status" as "job_status" on "assetId" = "assets"."id"
-where
-  "assets"."visibility" != $1
-  and "assets"."deletedAt" is null
-  and "job_status"."previewAt" is not null
-  and not exists (
-    select
-    from
-      "smart_search"
-    where
-      "assetId" = "assets"."id"
-  )
-  and "job_status"."duplicatesDetectedAt" is null
-
--- AssetJobRepository.streamForEncodeClip
-select
-  "assets"."id"
-from
-  "assets"
-  inner join "asset_job_status" as "job_status" on "assetId" = "assets"."id"
-where
-  "assets"."visibility" != $1
-  and "assets"."deletedAt" is null
-  and "job_status"."previewAt" is not null
-  and not exists (
-    select
-    from
-      "smart_search"
-    where
-      "assetId" = "assets"."id"
-  )
-
--- AssetJobRepository.getForClipEncoding
-select
-  "assets"."id",
-  "assets"."visibility",
-  (
-    select
-      coalesce(json_agg(agg), '[]')
-    from
-      (
-        select
-          "asset_files"."id",
-          "asset_files"."path",
-          "asset_files"."type"
-        from
-          "asset_files"
-        where
-          "asset_files"."assetId" = "assets"."id"
-          and "asset_files"."type" = $1
-      ) as agg
-  ) as "files"
-from
-  "assets"
-where
-  "assets"."id" = $2
-
--- AssetJobRepository.getForDetectFacesJob
-select
-  "assets"."id",
-  "assets"."visibility",
-  to_json("exif") as "exifInfo",
-  (
-    select
-      coalesce(json_agg(agg), '[]')
-    from
-      (
-        select
-          "asset_faces".*
-        from
-          "asset_faces"
-        where
-          "asset_faces"."assetId" = "assets"."id"
+          "asset_face"."assetId" = "asset"."id"
+          and "asset_face"."deletedAt" is null
       ) as agg
   ) as "faces",
   (
@@ -280,67 +211,197 @@ select
     from
       (
         select
-          "asset_files"."id",
-          "asset_files"."path",
-          "asset_files"."type"
+          "asset_file"."id",
+          "asset_file"."path",
+          "asset_file"."type"
         from
-          "asset_files"
+          "asset_file"
         where
-          "asset_files"."assetId" = "assets"."id"
-          and "asset_files"."type" = $1
+          "asset_file"."assetId" = "asset"."id"
+          and "asset_file"."type" = $1
       ) as agg
   ) as "files"
 from
-  "assets"
-  inner join "exif" on "assets"."id" = "exif"."assetId"
+  "asset"
 where
-  "assets"."id" = $2
+  "asset"."id" = $2
 
--- AssetJobRepository.getForSyncAssets
+-- AssetJobRepository.getLockedPropertiesForMetadataExtraction
 select
-  "assets"."id",
-  "assets"."isOffline",
-  "assets"."libraryId",
-  "assets"."originalPath",
-  "assets"."status",
-  "assets"."fileModifiedAt"
+  "asset_exif"."lockedProperties"
 from
-  "assets"
+  "asset_exif"
 where
-  "assets"."id" = any ($1::uuid[])
+  "asset_exif"."assetId" = $1
 
--- AssetJobRepository.getForAssetDeletion
+-- AssetJobRepository.getAlbumThumbnailFiles
 select
-  "assets"."id",
-  "assets"."visibility",
-  "assets"."libraryId",
-  "assets"."ownerId",
-  "assets"."livePhotoVideoId",
-  "assets"."sidecarPath",
-  "assets"."encodedVideoPath",
-  "assets"."originalPath",
-  to_json("exif") as "exifInfo",
+  "asset_file"."id",
+  "asset_file"."path",
+  "asset_file"."type"
+from
+  "asset_file"
+where
+  "asset_file"."assetId" = $1
+  and "asset_file"."type" = $2
+
+-- AssetJobRepository.streamForSearchDuplicates
+select
+  "asset"."id"
+from
+  "asset"
+  inner join "smart_search" on "asset"."id" = "smart_search"."assetId"
+  inner join "asset_job_status" as "job_status" on "job_status"."assetId" = "asset"."id"
+where
+  "asset"."deletedAt" is null
+  and "asset"."visibility" in ('archive', 'timeline')
+  and "job_status"."duplicatesDetectedAt" is null
+
+-- AssetJobRepository.streamForEncodeClip
+select
+  "asset"."id"
+from
+  "asset"
+  inner join "asset_job_status" as "job_status" on "assetId" = "asset"."id"
+where
+  "asset"."visibility" != $1
+  and "asset"."deletedAt" is null
+  and "job_status"."previewAt" is not null
+  and not exists (
+    select
+    from
+      "smart_search"
+    where
+      "assetId" = "asset"."id"
+  )
+
+-- AssetJobRepository.getForClipEncoding
+select
+  "asset"."id",
+  "asset"."visibility",
   (
     select
       coalesce(json_agg(agg), '[]')
     from
       (
         select
-          "asset_faces".*,
+          "asset_file"."id",
+          "asset_file"."path",
+          "asset_file"."type"
+        from
+          "asset_file"
+        where
+          "asset_file"."assetId" = "asset"."id"
+          and "asset_file"."type" = $1
+      ) as agg
+  ) as "files"
+from
+  "asset"
+where
+  "asset"."id" = $2
+
+-- AssetJobRepository.getForDetectFacesJob
+select
+  "asset"."id",
+  "asset"."visibility",
+  to_json("asset_exif") as "exifInfo",
+  (
+    select
+      coalesce(json_agg(agg), '[]')
+    from
+      (
+        select
+          "asset_face".*
+        from
+          "asset_face"
+        where
+          "asset_face"."assetId" = "asset"."id"
+      ) as agg
+  ) as "faces",
+  (
+    select
+      coalesce(json_agg(agg), '[]')
+    from
+      (
+        select
+          "asset_file"."id",
+          "asset_file"."path",
+          "asset_file"."type"
+        from
+          "asset_file"
+        where
+          "asset_file"."assetId" = "asset"."id"
+          and "asset_file"."type" = $1
+      ) as agg
+  ) as "files"
+from
+  "asset"
+  inner join "asset_exif" on "asset"."id" = "asset_exif"."assetId"
+where
+  "asset"."id" = $2
+
+-- AssetJobRepository.getForOcr
+select
+  "asset"."visibility",
+  (
+    select
+      "asset_file"."path"
+    from
+      "asset_file"
+    where
+      "asset_file"."assetId" = "asset"."id"
+      and "asset_file"."type" = $1
+  ) as "previewFile"
+from
+  "asset"
+where
+  "asset"."id" = $2
+
+-- AssetJobRepository.getForSyncAssets
+select
+  "asset"."id",
+  "asset"."isOffline",
+  "asset"."libraryId",
+  "asset"."originalPath",
+  "asset"."status",
+  "asset"."fileModifiedAt"
+from
+  "asset"
+where
+  "asset"."id" = any ($1::uuid[])
+
+-- AssetJobRepository.getForAssetDeletion
+select
+  "asset"."id",
+  "asset"."visibility",
+  "asset"."libraryId",
+  "asset"."ownerId",
+  "asset"."livePhotoVideoId",
+  "asset"."encodedVideoPath",
+  "asset"."originalPath",
+  "asset"."isOffline",
+  to_json("asset_exif") as "exifInfo",
+  (
+    select
+      coalesce(json_agg(agg), '[]')
+    from
+      (
+        select
+          "asset_face".*,
           "person" as "person"
         from
-          "asset_faces"
+          "asset_face"
           left join lateral (
             select
               "person".*
             from
               "person"
             where
-              "asset_faces"."personId" = "person"."id"
+              "asset_face"."personId" = "person"."id"
           ) as "person" on true
         where
-          "asset_faces"."assetId" = "assets"."id"
-          and "asset_faces"."deletedAt" is null
+          "asset_face"."assetId" = "asset"."id"
+          and "asset_face"."deletedAt" is null
       ) as agg
   ) as "faces",
   (
@@ -349,157 +410,200 @@ select
     from
       (
         select
-          "asset_files"."id",
-          "asset_files"."path",
-          "asset_files"."type"
+          "asset_file"."id",
+          "asset_file"."path",
+          "asset_file"."type"
         from
-          "asset_files"
+          "asset_file"
         where
-          "asset_files"."assetId" = "assets"."id"
+          "asset_file"."assetId" = "asset"."id"
       ) as agg
   ) as "files",
   to_json("stacked_assets") as "stack"
 from
-  "assets"
-  left join "exif" on "assets"."id" = "exif"."assetId"
-  left join "asset_stack" on "asset_stack"."id" = "assets"."stackId"
+  "asset"
+  left join "asset_exif" on "asset"."id" = "asset_exif"."assetId"
+  left join "stack" on "stack"."id" = "asset"."stackId"
   left join lateral (
     select
-      "asset_stack"."id",
-      "asset_stack"."primaryAssetId",
+      "stack"."id",
+      "stack"."primaryAssetId",
       array_agg("stacked") as "assets"
     from
-      "assets" as "stacked"
+      "asset" as "stacked"
     where
       "stacked"."deletedAt" is not null
-      and "stacked"."visibility" != $1
-      and "stacked"."stackId" = "asset_stack"."id"
+      and "stacked"."visibility" = $1
+      and "stacked"."stackId" = "stack"."id"
     group by
-      "asset_stack"."id"
-  ) as "stacked_assets" on "asset_stack"."id" is not null
+      "stack"."id"
+  ) as "stacked_assets" on "stack"."id" is not null
 where
-  "assets"."id" = $2
+  "asset"."id" = $2
 
 -- AssetJobRepository.streamForVideoConversion
 select
-  "assets"."id"
+  "asset"."id"
 from
-  "assets"
+  "asset"
 where
-  "assets"."type" = $1
+  "asset"."type" = $1
   and (
-    "assets"."encodedVideoPath" is null
-    or "assets"."encodedVideoPath" = $2
+    "asset"."encodedVideoPath" is null
+    or "asset"."encodedVideoPath" = $2
   )
-  and "assets"."visibility" != $3
-  and "assets"."deletedAt" is null
+  and "asset"."visibility" != $3
+  and "asset"."deletedAt" is null
 
 -- AssetJobRepository.getForVideoConversion
 select
-  "assets"."id",
-  "assets"."ownerId",
-  "assets"."originalPath",
-  "assets"."encodedVideoPath"
+  "asset"."id",
+  "asset"."ownerId",
+  "asset"."originalPath",
+  "asset"."encodedVideoPath"
 from
-  "assets"
+  "asset"
 where
-  "assets"."id" = $1
-  and "assets"."type" = $2
+  "asset"."id" = $1
+  and "asset"."type" = $2
 
 -- AssetJobRepository.streamForMetadataExtraction
 select
-  "assets"."id"
+  "asset"."id"
 from
-  "assets"
-  left join "asset_job_status" on "asset_job_status"."assetId" = "assets"."id"
+  "asset"
+  left join "asset_job_status" on "asset_job_status"."assetId" = "asset"."id"
 where
   (
     "asset_job_status"."metadataExtractedAt" is null
     or "asset_job_status"."assetId" is null
   )
-  and "assets"."visibility" != $1
-  and "assets"."deletedAt" is null
+  and "asset"."deletedAt" is null
 
 -- AssetJobRepository.getForStorageTemplateJob
 select
-  "assets"."id",
-  "assets"."ownerId",
-  "assets"."type",
-  "assets"."checksum",
-  "assets"."originalPath",
-  "assets"."isExternal",
-  "assets"."sidecarPath",
-  "assets"."originalFileName",
-  "assets"."livePhotoVideoId",
-  "assets"."fileCreatedAt",
-  "exif"."timeZone",
-  "exif"."fileSizeInByte"
+  "asset"."id",
+  "asset"."ownerId",
+  "asset"."type",
+  "asset"."checksum",
+  "asset"."originalPath",
+  "asset"."isExternal",
+  "asset"."originalFileName",
+  "asset"."livePhotoVideoId",
+  "asset"."fileCreatedAt",
+  "asset_exif"."timeZone",
+  "asset_exif"."fileSizeInByte",
+  (
+    select
+      coalesce(json_agg(agg), '[]')
+    from
+      (
+        select
+          "asset_file"."id",
+          "asset_file"."path",
+          "asset_file"."type"
+        from
+          "asset_file"
+        where
+          "asset_file"."assetId" = "asset"."id"
+          and "asset_file"."type" = $1
+      ) as agg
+  ) as "files"
 from
-  "assets"
-  inner join "exif" on "assets"."id" = "exif"."assetId"
+  "asset"
+  inner join "asset_exif" on "asset"."id" = "asset_exif"."assetId"
 where
-  "assets"."deletedAt" is null
-  and "assets"."id" = $1
+  "asset"."deletedAt" is null
+  and "asset"."id" = $2
 
 -- AssetJobRepository.streamForStorageTemplateJob
 select
-  "assets"."id",
-  "assets"."ownerId",
-  "assets"."type",
-  "assets"."checksum",
-  "assets"."originalPath",
-  "assets"."isExternal",
-  "assets"."sidecarPath",
-  "assets"."originalFileName",
-  "assets"."livePhotoVideoId",
-  "assets"."fileCreatedAt",
-  "exif"."timeZone",
-  "exif"."fileSizeInByte"
+  "asset"."id",
+  "asset"."ownerId",
+  "asset"."type",
+  "asset"."checksum",
+  "asset"."originalPath",
+  "asset"."isExternal",
+  "asset"."originalFileName",
+  "asset"."livePhotoVideoId",
+  "asset"."fileCreatedAt",
+  "asset_exif"."timeZone",
+  "asset_exif"."fileSizeInByte",
+  (
+    select
+      coalesce(json_agg(agg), '[]')
+    from
+      (
+        select
+          "asset_file"."id",
+          "asset_file"."path",
+          "asset_file"."type"
+        from
+          "asset_file"
+        where
+          "asset_file"."assetId" = "asset"."id"
+          and "asset_file"."type" = $1
+      ) as agg
+  ) as "files"
 from
-  "assets"
-  inner join "exif" on "assets"."id" = "exif"."assetId"
+  "asset"
+  inner join "asset_exif" on "asset"."id" = "asset_exif"."assetId"
 where
-  "assets"."deletedAt" is null
+  "asset"."deletedAt" is null
 
 -- AssetJobRepository.streamForDeletedJob
 select
   "id",
   "isOffline"
 from
-  "assets"
+  "asset"
 where
-  "assets"."deletedAt" <= $1
+  "asset"."deletedAt" <= $1
 
 -- AssetJobRepository.streamForSidecar
 select
-  "assets"."id"
+  "asset"."id"
 from
-  "assets"
+  "asset"
 where
-  (
-    "assets"."sidecarPath" = $1
-    or "assets"."sidecarPath" is null
+  not exists (
+    select
+      "asset_file"."id"
+    from
+      "asset_file"
+    where
+      "asset_file"."assetId" = "asset"."id"
+      and "asset_file"."type" = $1
   )
-  and "assets"."visibility" != $2
 
 -- AssetJobRepository.streamForDetectFacesJob
 select
-  "assets"."id"
+  "asset"."id"
 from
-  "assets"
-  inner join "asset_job_status" as "job_status" on "assetId" = "assets"."id"
+  "asset"
+  inner join "asset_job_status" as "job_status" on "assetId" = "asset"."id"
 where
-  "assets"."visibility" != $1
-  and "assets"."deletedAt" is null
+  "asset"."visibility" != $1
+  and "asset"."deletedAt" is null
   and "job_status"."previewAt" is not null
-  and "job_status"."facesRecognizedAt" is null
 order by
-  "assets"."createdAt" desc
+  "asset"."fileCreatedAt" desc
+
+-- AssetJobRepository.streamForOcrJob
+select
+  "asset"."id"
+from
+  "asset"
+  inner join "asset_job_status" on "asset_job_status"."assetId" = "asset"."id"
+where
+  "asset_job_status"."ocrAt" is null
+  and "asset"."deletedAt" is null
+  and "asset"."visibility" != $1
 
 -- AssetJobRepository.streamForMigrationJob
 select
   "id"
 from
-  "assets"
+  "asset"
 where
-  "assets"."deletedAt" is null
+  "asset"."deletedAt" is null

@@ -1,10 +1,10 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsBoolean, IsEmail, IsEnum, IsNotEmpty, IsNumber, IsString, Min } from 'class-validator';
+import { IsEmail, IsInt, IsNotEmpty, IsString, Min } from 'class-validator';
 import { User, UserAdmin } from 'src/database';
 import { UserAvatarColor, UserMetadataKey, UserStatus } from 'src/enum';
 import { UserMetadataItem } from 'src/types';
-import { Optional, PinCode, ValidateBoolean, ValidateUUID, toEmail, toSanitized } from 'src/validation';
+import { Optional, PinCode, ValidateBoolean, ValidateEnum, ValidateUUID, toEmail, toSanitized } from 'src/validation';
 
 export class UserUpdateMeDto {
   @Optional()
@@ -23,9 +23,7 @@ export class UserUpdateMeDto {
   @IsNotEmpty()
   name?: string;
 
-  @Optional({ nullable: true })
-  @IsEnum(UserAvatarColor)
-  @ApiProperty({ enumName: 'UserAvatarColor', enum: UserAvatarColor })
+  @ValidateEnum({ enum: UserAvatarColor, name: 'UserAvatarColor', optional: true, nullable: true })
   avatarColor?: UserAvatarColor | null;
 }
 
@@ -34,7 +32,7 @@ export class UserResponseDto {
   name!: string;
   email!: string;
   profileImagePath!: string;
-  @ApiProperty({ enumName: 'UserAvatarColor', enum: UserAvatarColor })
+  @ValidateEnum({ enum: UserAvatarColor, name: 'UserAvatarColor' })
   avatarColor!: UserAvatarColor;
   profileChangedAt!: Date;
 }
@@ -84,9 +82,7 @@ export class UserAdminCreateDto {
   @IsString()
   name!: string;
 
-  @Optional({ nullable: true })
-  @IsEnum(UserAvatarColor)
-  @ApiProperty({ enumName: 'UserAvatarColor', enum: UserAvatarColor })
+  @ValidateEnum({ enum: UserAvatarColor, name: 'UserAvatarColor', optional: true, nullable: true })
   avatarColor?: UserAvatarColor | null;
 
   @Optional({ nullable: true })
@@ -95,7 +91,7 @@ export class UserAdminCreateDto {
   storageLabel?: string | null;
 
   @Optional({ nullable: true })
-  @IsNumber()
+  @IsInt()
   @Min(0)
   @ApiProperty({ type: 'integer', format: 'int64' })
   quotaSizeInBytes?: number | null;
@@ -103,9 +99,11 @@ export class UserAdminCreateDto {
   @ValidateBoolean({ optional: true })
   shouldChangePassword?: boolean;
 
-  @Optional()
-  @IsBoolean()
+  @ValidateBoolean({ optional: true })
   notify?: boolean;
+
+  @ValidateBoolean({ optional: true })
+  isAdmin?: boolean;
 }
 
 export class UserAdminUpdateDto {
@@ -127,9 +125,7 @@ export class UserAdminUpdateDto {
   @IsNotEmpty()
   name?: string;
 
-  @Optional({ nullable: true })
-  @IsEnum(UserAvatarColor)
-  @ApiProperty({ enumName: 'UserAvatarColor', enum: UserAvatarColor })
+  @ValidateEnum({ enum: UserAvatarColor, name: 'UserAvatarColor', optional: true, nullable: true })
   avatarColor?: UserAvatarColor | null;
 
   @Optional({ nullable: true })
@@ -141,10 +137,13 @@ export class UserAdminUpdateDto {
   shouldChangePassword?: boolean;
 
   @Optional({ nullable: true })
-  @IsNumber()
+  @IsInt()
   @Min(0)
   @ApiProperty({ type: 'integer', format: 'int64' })
   quotaSizeInBytes?: number | null;
+
+  @ValidateBoolean({ optional: true })
+  isAdmin?: boolean;
 }
 
 export class UserAdminDeleteDto {
@@ -164,7 +163,7 @@ export class UserAdminResponseDto extends UserResponseDto {
   quotaSizeInBytes!: number | null;
   @ApiProperty({ type: 'integer', format: 'int64' })
   quotaUsageInBytes!: number | null;
-  @ApiProperty({ enumName: 'UserStatus', enum: UserStatus })
+  @ValidateEnum({ enum: UserStatus, name: 'UserStatus' })
   status!: string;
   license!: UserLicense | null;
 }
@@ -172,8 +171,9 @@ export class UserAdminResponseDto extends UserResponseDto {
 export function mapUserAdmin(entity: UserAdmin): UserAdminResponseDto {
   const metadata = entity.metadata || [];
   const license = metadata.find(
-    (item): item is UserMetadataItem<UserMetadataKey.LICENSE> => item.key === UserMetadataKey.LICENSE,
+    (item): item is UserMetadataItem<UserMetadataKey.License> => item.key === UserMetadataKey.License,
   )?.value;
+
   return {
     ...mapUser(entity),
     storageLabel: entity.storageLabel,

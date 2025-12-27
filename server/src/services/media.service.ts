@@ -18,13 +18,12 @@ import {
   QueueName,
   RawExtractedFormat,
   StorageFolder,
-  TranscodeHWAccel,
+  TranscodeHardwareAcceleration,
   TranscodePolicy,
   TranscodeTarget,
   VideoCodec,
   VideoContainer,
 } from 'src/enum';
-import { UpsertFileOptions } from 'src/repositories/asset.repository';
 import { BoundingBox } from 'src/repositories/machine-learning.repository';
 import { BaseService } from 'src/services/base.service';
 import {
@@ -42,19 +41,24 @@ import { getAssetFiles } from 'src/utils/asset.util';
 import { BaseConfig, ThumbnailConfig } from 'src/utils/media';
 import { mimeTypes } from 'src/utils/mime-types';
 import { clamp, isFaceImportEnabled, isFacialRecognitionEnabled } from 'src/utils/misc';
+interface UpsertFileOptions {
+  assetId: string;
+  type: AssetFileType;
+  path: string;
+}
 
 @Injectable()
 export class MediaService extends BaseService {
   videoInterfaces: VideoInterfaces = { dri: [], mali: false };
 
-  @OnEvent({ name: 'app.bootstrap' })
+  @OnEvent({ name: 'AppBootstrap' })
   async onBootstrap() {
     const [dri, mali] = await Promise.all([this.getDevices(), this.hasMaliOpenCL()]);
     this.videoInterfaces = { dri, mali };
   }
 
-  @OnJob({ name: JobName.QUEUE_GENERATE_THUMBNAILS, queue: QueueName.THUMBNAIL_GENERATION })
-  async handleQueueGenerateThumbnails({ force }: JobOf<JobName.QUEUE_GENERATE_THUMBNAILS>): Promise<JobStatus> {
+  @OnJob({ name: JobName.AssetGenerateThumbnailsQueueAll, queue: QueueName.ThumbnailGeneration })
+  async handleQueueGenerateThumbnails({ force }: JobOf<JobName.AssetGenerateThumbnailsQueueAll>): Promise<JobStatus> {
     let jobs: JobItem[] = [];
 
     const queueAll = async () => {
@@ -66,7 +70,7 @@ export class MediaService extends BaseService {
       const { previewFile, thumbnailFile } = getAssetFiles(asset.files);
 
       if (!previewFile || !thumbnailFile || !asset.thumbhash || force) {
-        jobs.push({ name: JobName.GENERATE_THUMBNAILS, data: { id: asset.id } });
+        jobs.push({ name: JobName.AssetGenerateThumbnails, data: { id: asset.id } });
       }
 
       if (jobs.length >= JOBS_ASSET_PAGINATION_SIZE) {
@@ -88,7 +92,7 @@ export class MediaService extends BaseService {
         await this.personRepository.update({ id: person.id, faceAssetId: face.id });
       }
 
-      jobs.push({ name: JobName.GENERATE_PERSON_THUMBNAIL, data: { id: person.id } });
+      jobs.push({ name: JobName.PersonGenerateThumbnail, data: { id: person.id } });
       if (jobs.length >= JOBS_ASSET_PAGINATION_SIZE) {
         await queueAll();
       }
@@ -96,21 +100,21 @@ export class MediaService extends BaseService {
 
     await queueAll();
 
-    return JobStatus.SUCCESS;
+    return JobStatus.Success;
   }
 
-  @OnJob({ name: JobName.QUEUE_MIGRATION, queue: QueueName.MIGRATION })
+  @OnJob({ name: JobName.FileMigrationQueueAll, queue: QueueName.Migration })
   async handleQueueMigration(): Promise<JobStatus> {
-    const { active, waiting } = await this.jobRepository.getJobCounts(QueueName.MIGRATION);
+    const { active, waiting } = await this.jobRepository.getJobCounts(QueueName.Migration);
     if (active === 1 && waiting === 0) {
-      await this.storageCore.removeEmptyDirs(StorageFolder.THUMBNAILS);
-      await this.storageCore.removeEmptyDirs(StorageFolder.ENCODED_VIDEO);
+      await this.storageCore.removeEmptyDirs(StorageFolder.Thumbnails);
+      await this.storageCore.removeEmptyDirs(StorageFolder.EncodedVideo);
     }
 
     let jobs: JobItem[] = [];
     const assets = this.assetJobRepository.streamForMigrationJob();
     for await (const asset of assets) {
-      jobs.push({ name: JobName.MIGRATE_ASSET, data: { id: asset.id } });
+      jobs.push({ name: JobName.AssetFileMigration, data: { id: asset.id } });
       if (jobs.length >= JOBS_ASSET_PAGINATION_SIZE) {
         await this.jobRepository.queueAll(jobs);
         jobs = [];
@@ -121,7 +125,7 @@ export class MediaService extends BaseService {
     jobs = [];
 
     for await (const person of this.personRepository.getAll()) {
-      jobs.push({ name: JobName.MIGRATE_PERSON, data: { id: person.id } });
+      jobs.push({ name: JobName.PersonFileMigration, data: { id: person.id } });
 
       if (jobs.length === JOBS_ASSET_PAGINATION_SIZE) {
         await this.jobRepository.queueAll(jobs);
@@ -131,36 +135,36 @@ export class MediaService extends BaseService {
 
     await this.jobRepository.queueAll(jobs);
 
-    return JobStatus.SUCCESS;
+    return JobStatus.Success;
   }
 
-  @OnJob({ name: JobName.MIGRATE_ASSET, queue: QueueName.MIGRATION })
-  async handleAssetMigration({ id }: JobOf<JobName.MIGRATE_ASSET>): Promise<JobStatus> {
+  @OnJob({ name: JobName.AssetFileMigration, queue: QueueName.Migration })
+  async handleAssetMigration({ id }: JobOf<JobName.AssetFileMigration>): Promise<JobStatus> {
     const { image } = await this.getConfig({ withCache: true });
     const asset = await this.assetJobRepository.getForMigrationJob(id);
     if (!asset) {
-      return JobStatus.FAILED;
+      return JobStatus.Failed;
     }
 
-    await this.storageCore.moveAssetImage(asset, AssetPathType.FULLSIZE, image.fullsize.format);
-    await this.storageCore.moveAssetImage(asset, AssetPathType.PREVIEW, image.preview.format);
-    await this.storageCore.moveAssetImage(asset, AssetPathType.THUMBNAIL, image.thumbnail.format);
+    await this.storageCore.moveAssetImage(asset, AssetPathType.FullSize, image.fullsize.format);
+    await this.storageCore.moveAssetImage(asset, AssetPathType.Preview, image.preview.format);
+    await this.storageCore.moveAssetImage(asset, AssetPathType.Thumbnail, image.thumbnail.format);
     await this.storageCore.moveAssetVideo(asset);
 
-    return JobStatus.SUCCESS;
+    return JobStatus.Success;
   }
 
-  @OnJob({ name: JobName.GENERATE_THUMBNAILS, queue: QueueName.THUMBNAIL_GENERATION })
-  async handleGenerateThumbnails({ id }: JobOf<JobName.GENERATE_THUMBNAILS>): Promise<JobStatus> {
+  @OnJob({ name: JobName.AssetGenerateThumbnails, queue: QueueName.ThumbnailGeneration })
+  async handleGenerateThumbnails({ id }: JobOf<JobName.AssetGenerateThumbnails>): Promise<JobStatus> {
     const asset = await this.assetJobRepository.getForGenerateThumbnailJob(id);
     if (!asset) {
-      this.logger.warn(`Thumbnail generation failed for asset ${id}: not found`);
-      return JobStatus.FAILED;
+      this.logger.warn(`Thumbnail generation failed for asset ${id}: not found in database or missing metadata`);
+      return JobStatus.Failed;
     }
 
-    if (asset.visibility === AssetVisibility.HIDDEN) {
+    if (asset.visibility === AssetVisibility.Hidden) {
       this.logger.verbose(`Thumbnail generation skipped for asset ${id}: not visible`);
-      return JobStatus.SKIPPED;
+      return JobStatus.Skipped;
     }
 
     let generated: {
@@ -169,27 +173,29 @@ export class MediaService extends BaseService {
       fullsizePath?: string;
       thumbhash: Buffer;
     };
-    if (asset.type === AssetType.VIDEO || asset.originalFileName.toLowerCase().endsWith('.gif')) {
+    if (asset.type === AssetType.Video || asset.originalFileName.toLowerCase().endsWith('.gif')) {
+      this.logger.verbose(`Thumbnail generation for video ${id} ${asset.originalPath}`);
       generated = await this.generateVideoThumbnails(asset);
-    } else if (asset.type === AssetType.IMAGE) {
+    } else if (asset.type === AssetType.Image) {
+      this.logger.verbose(`Thumbnail generation for image ${id} ${asset.originalPath}`);
       generated = await this.generateImageThumbnails(asset);
     } else {
       this.logger.warn(`Skipping thumbnail generation for asset ${id}: ${asset.type} is not an image or video`);
-      return JobStatus.SKIPPED;
+      return JobStatus.Skipped;
     }
 
     const { previewFile, thumbnailFile, fullsizeFile } = getAssetFiles(asset.files);
     const toUpsert: UpsertFileOptions[] = [];
     if (previewFile?.path !== generated.previewPath) {
-      toUpsert.push({ assetId: asset.id, path: generated.previewPath, type: AssetFileType.PREVIEW });
+      toUpsert.push({ assetId: asset.id, path: generated.previewPath, type: AssetFileType.Preview });
     }
 
     if (thumbnailFile?.path !== generated.thumbnailPath) {
-      toUpsert.push({ assetId: asset.id, path: generated.thumbnailPath, type: AssetFileType.THUMBNAIL });
+      toUpsert.push({ assetId: asset.id, path: generated.thumbnailPath, type: AssetFileType.Thumbnail });
     }
 
     if (generated.fullsizePath && fullsizeFile?.path !== generated.fullsizePath) {
-      toUpsert.push({ assetId: asset.id, path: generated.fullsizePath, type: AssetFileType.FULLSIZE });
+      toUpsert.push({ assetId: asset.id, path: generated.fullsizePath, type: AssetFileType.FullSize });
     }
 
     if (toUpsert.length > 0) {
@@ -226,7 +232,7 @@ export class MediaService extends BaseService {
 
     await this.assetRepository.upsertJobStatus({ assetId: asset.id, previewAt: new Date(), thumbnailAt: new Date() });
 
-    return JobStatus.SUCCESS;
+    return JobStatus.Success;
   }
 
   private async extractImage(originalPath: string, minSize: number) {
@@ -240,7 +246,7 @@ export class MediaService extends BaseService {
 
   private async decodeImage(thumbSource: string | Buffer, exifInfo: Exif, targetSize?: number) {
     const { image } = await this.getConfig({ withCache: true });
-    const colorspace = this.isSRGB(exifInfo) ? Colorspace.SRGB : image.colorspace;
+    const colorspace = this.isSRGB(exifInfo) ? Colorspace.Srgb : image.colorspace;
     const decodeOptions: DecodeToBufferOptions = {
       colorspace,
       processInvalidImages: process.env.IMMICH_PROCESS_INVALID_IMAGES === 'true',
@@ -260,14 +266,16 @@ export class MediaService extends BaseService {
     exifInfo: Exif;
   }) {
     const { image } = await this.getConfig({ withCache: true });
-    const previewPath = StorageCore.getImagePath(asset, AssetPathType.PREVIEW, image.preview.format);
-    const thumbnailPath = StorageCore.getImagePath(asset, AssetPathType.THUMBNAIL, image.thumbnail.format);
+    const previewPath = StorageCore.getImagePath(asset, AssetPathType.Preview, image.preview.format);
+    const thumbnailPath = StorageCore.getImagePath(asset, AssetPathType.Thumbnail, image.thumbnail.format);
     this.storageCore.ensureFolders(previewPath);
 
     // Handle embedded preview extraction for RAW files
     const extractEmbedded = image.extractEmbedded && mimeTypes.isRaw(asset.originalFileName);
     const extracted = extractEmbedded ? await this.extractImage(asset.originalPath, image.preview.size) : null;
-    const generateFullsize = image.fullsize.enabled && !mimeTypes.isWebSupportedImage(asset.originalPath);
+    const generateFullsize =
+      (image.fullsize.enabled || asset.exifInfo.projectionType == 'EQUIRECTANGULAR') &&
+      !mimeTypes.isWebSupportedImage(asset.originalPath);
     const convertFullsize = generateFullsize && (!extracted || !mimeTypes.isWebSupportedImage(` .${extracted.format}`));
 
     const { info, data, colorspace } = await this.decodeImage(
@@ -290,11 +298,11 @@ export class MediaService extends BaseService {
 
     if (convertFullsize) {
       // convert a new fullsize image from the same source as the thumbnail
-      fullsizePath = StorageCore.getImagePath(asset, AssetPathType.FULLSIZE, image.fullsize.format);
+      fullsizePath = StorageCore.getImagePath(asset, AssetPathType.FullSize, image.fullsize.format);
       const fullsizeOptions = { format: image.fullsize.format, quality: image.fullsize.quality, ...thumbnailOptions };
       promises.push(this.mediaRepository.generateThumbnail(data, fullsizeOptions, fullsizePath));
-    } else if (generateFullsize && extracted && extracted.format === RawExtractedFormat.JPEG) {
-      fullsizePath = StorageCore.getImagePath(asset, AssetPathType.FULLSIZE, extracted.format);
+    } else if (generateFullsize && extracted && extracted.format === RawExtractedFormat.Jpeg) {
+      fullsizePath = StorageCore.getImagePath(asset, AssetPathType.FullSize, extracted.format);
       this.storageCore.ensureFolders(fullsizePath);
 
       // Write the buffer to disk with essential EXIF data
@@ -310,33 +318,41 @@ export class MediaService extends BaseService {
 
     const outputs = await Promise.all(promises);
 
+    if (asset.exifInfo.projectionType === 'EQUIRECTANGULAR') {
+      const promises = [
+        this.mediaRepository.copyTagGroup('XMP-GPano', asset.originalPath, previewPath),
+        fullsizePath
+          ? this.mediaRepository.copyTagGroup('XMP-GPano', asset.originalPath, fullsizePath)
+          : Promise.resolve(),
+      ];
+      await Promise.all(promises);
+    }
+
     return { previewPath, thumbnailPath, fullsizePath, thumbhash: outputs[0] as Buffer };
   }
 
-  @OnJob({ name: JobName.GENERATE_PERSON_THUMBNAIL, queue: QueueName.THUMBNAIL_GENERATION })
-  async handleGeneratePersonThumbnail({ id }: JobOf<JobName.GENERATE_PERSON_THUMBNAIL>): Promise<JobStatus> {
+  @OnJob({ name: JobName.PersonGenerateThumbnail, queue: QueueName.ThumbnailGeneration })
+  async handleGeneratePersonThumbnail({ id }: JobOf<JobName.PersonGenerateThumbnail>): Promise<JobStatus> {
     const { machineLearning, metadata, image } = await this.getConfig({ withCache: true });
     if (!isFacialRecognitionEnabled(machineLearning) && !isFaceImportEnabled(metadata)) {
-      return JobStatus.SKIPPED;
+      return JobStatus.Skipped;
     }
 
     const data = await this.personRepository.getDataForThumbnailGenerationJob(id);
     if (!data) {
       this.logger.error(`Could not generate person thumbnail for ${id}: missing data`);
-      return JobStatus.FAILED;
+      return JobStatus.Failed;
     }
 
     const { ownerId, x1, y1, x2, y2, oldWidth, oldHeight, exifOrientation, previewPath, originalPath } = data;
     let inputImage: string | Buffer;
-    if (mimeTypes.isVideo(originalPath)) {
+    if (data.type === AssetType.Video) {
       if (!previewPath) {
         this.logger.error(`Could not generate person thumbnail for video ${id}: missing preview path`);
-        return JobStatus.FAILED;
+        return JobStatus.Failed;
       }
       inputImage = previewPath;
-    }
-
-    if (image.extractEmbedded && mimeTypes.isRaw(originalPath)) {
+    } else if (image.extractEmbedded && mimeTypes.isRaw(originalPath)) {
       const extracted = await this.extractImage(originalPath, image.preview.size);
       inputImage = extracted ? extracted.buffer : originalPath;
     } else {
@@ -355,7 +371,7 @@ export class MediaService extends BaseService {
 
     const thumbnailOptions = {
       colorspace: image.colorspace,
-      format: ImageFormat.JPEG,
+      format: ImageFormat.Jpeg,
       raw: info,
       quality: image.thumbnail.quality,
       crop: this.getCrop(
@@ -369,7 +385,7 @@ export class MediaService extends BaseService {
     await this.mediaRepository.generateThumbnail(decodedImage, thumbnailOptions, thumbnailPath);
     await this.personRepository.update({ id, thumbnailPath });
 
-    return JobStatus.SUCCESS;
+    return JobStatus.Success;
   }
 
   private getCrop(dims: { old: ImageDimensions; new: ImageDimensions }, { x1, y1, x2, y2 }: BoundingBox): CropOptions {
@@ -409,8 +425,8 @@ export class MediaService extends BaseService {
 
   private async generateVideoThumbnails(asset: ThumbnailPathEntity & { originalPath: string }) {
     const { image, ffmpeg } = await this.getConfig({ withCache: true });
-    const previewPath = StorageCore.getImagePath(asset, AssetPathType.PREVIEW, image.preview.format);
-    const thumbnailPath = StorageCore.getImagePath(asset, AssetPathType.THUMBNAIL, image.thumbnail.format);
+    const previewPath = StorageCore.getImagePath(asset, AssetPathType.Preview, image.preview.format);
+    const thumbnailPath = StorageCore.getImagePath(asset, AssetPathType.Thumbnail, image.thumbnail.format);
     this.storageCore.ensureFolders(previewPath);
 
     const { format, audioStreams, videoStreams } = await this.mediaRepository.probe(asset.originalPath);
@@ -422,9 +438,9 @@ export class MediaService extends BaseService {
 
     const previewConfig = ThumbnailConfig.create({ ...ffmpeg, targetResolution: image.preview.size.toString() });
     const thumbnailConfig = ThumbnailConfig.create({ ...ffmpeg, targetResolution: image.thumbnail.size.toString() });
-    const previewOptions = previewConfig.getCommand(TranscodeTarget.VIDEO, mainVideoStream, mainAudioStream, format);
+    const previewOptions = previewConfig.getCommand(TranscodeTarget.Video, mainVideoStream, mainAudioStream, format);
     const thumbnailOptions = thumbnailConfig.getCommand(
-      TranscodeTarget.VIDEO,
+      TranscodeTarget.Video,
       mainVideoStream,
       mainAudioStream,
       format,
@@ -441,13 +457,13 @@ export class MediaService extends BaseService {
     return { previewPath, thumbnailPath, thumbhash };
   }
 
-  @OnJob({ name: JobName.QUEUE_VIDEO_CONVERSION, queue: QueueName.VIDEO_CONVERSION })
-  async handleQueueVideoConversion(job: JobOf<JobName.QUEUE_VIDEO_CONVERSION>): Promise<JobStatus> {
+  @OnJob({ name: JobName.AssetEncodeVideoQueueAll, queue: QueueName.VideoConversion })
+  async handleQueueVideoConversion(job: JobOf<JobName.AssetEncodeVideoQueueAll>): Promise<JobStatus> {
     const { force } = job;
 
-    let queue: { name: JobName.VIDEO_CONVERSION; data: { id: string } }[] = [];
+    let queue: { name: JobName.AssetEncodeVideo; data: { id: string } }[] = [];
     for await (const asset of this.assetJobRepository.streamForVideoConversion(force)) {
-      queue.push({ name: JobName.VIDEO_CONVERSION, data: { id: asset.id } });
+      queue.push({ name: JobName.AssetEncodeVideo, data: { id: asset.id } });
 
       if (queue.length >= JOBS_ASSET_PAGINATION_SIZE) {
         await this.jobRepository.queueAll(queue);
@@ -457,14 +473,14 @@ export class MediaService extends BaseService {
 
     await this.jobRepository.queueAll(queue);
 
-    return JobStatus.SUCCESS;
+    return JobStatus.Success;
   }
 
-  @OnJob({ name: JobName.VIDEO_CONVERSION, queue: QueueName.VIDEO_CONVERSION })
-  async handleVideoConversion({ id }: JobOf<JobName.VIDEO_CONVERSION>): Promise<JobStatus> {
+  @OnJob({ name: JobName.AssetEncodeVideo, queue: QueueName.VideoConversion })
+  async handleVideoConversion({ id }: JobOf<JobName.AssetEncodeVideo>): Promise<JobStatus> {
     const asset = await this.assetJobRepository.getForVideoConversion(id);
     if (!asset) {
-      return JobStatus.FAILED;
+      return JobStatus.Failed;
     }
 
     const input = asset.originalPath;
@@ -472,35 +488,35 @@ export class MediaService extends BaseService {
     this.storageCore.ensureFolders(output);
 
     const { videoStreams, audioStreams, format } = await this.mediaRepository.probe(input, {
-      countFrames: this.logger.isLevelEnabled(LogLevel.DEBUG), // makes frame count more reliable for progress logs
+      countFrames: this.logger.isLevelEnabled(LogLevel.Debug), // makes frame count more reliable for progress logs
     });
     const videoStream = this.getMainStream(videoStreams);
     const audioStream = this.getMainStream(audioStreams);
     if (!videoStream || !format.formatName) {
-      return JobStatus.FAILED;
+      return JobStatus.Failed;
     }
 
     if (!videoStream.height || !videoStream.width) {
       this.logger.warn(`Skipped transcoding for asset ${asset.id}: no video streams found`);
-      return JobStatus.FAILED;
+      return JobStatus.Failed;
     }
 
     let { ffmpeg } = await this.getConfig({ withCache: true });
     const target = this.getTranscodeTarget(ffmpeg, videoStream, audioStream);
-    if (target === TranscodeTarget.NONE && !this.isRemuxRequired(ffmpeg, format)) {
+    if (target === TranscodeTarget.None && !this.isRemuxRequired(ffmpeg, format)) {
       if (asset.encodedVideoPath) {
         this.logger.log(`Transcoded video exists for asset ${asset.id}, but is no longer required. Deleting...`);
-        await this.jobRepository.queue({ name: JobName.DELETE_FILES, data: { files: [asset.encodedVideoPath] } });
+        await this.jobRepository.queue({ name: JobName.FileDelete, data: { files: [asset.encodedVideoPath] } });
         await this.assetRepository.update({ id: asset.id, encodedVideoPath: null });
       } else {
         this.logger.verbose(`Asset ${asset.id} does not require transcoding based on current policy, skipping`);
       }
 
-      return JobStatus.SKIPPED;
+      return JobStatus.Skipped;
     }
 
     const command = BaseConfig.create(ffmpeg, this.videoInterfaces).getCommand(target, videoStream, audioStream);
-    if (ffmpeg.accel === TranscodeHWAccel.DISABLED) {
+    if (ffmpeg.accel === TranscodeHardwareAcceleration.Disabled) {
       this.logger.log(`Transcoding video ${asset.id} without hardware acceleration`);
     } else {
       this.logger.log(
@@ -512,8 +528,8 @@ export class MediaService extends BaseService {
       await this.mediaRepository.transcode(input, output, command);
     } catch (error: any) {
       this.logger.error(`Error occurred during transcoding: ${error.message}`);
-      if (ffmpeg.accel === TranscodeHWAccel.DISABLED) {
-        return JobStatus.FAILED;
+      if (ffmpeg.accel === TranscodeHardwareAcceleration.Disabled) {
+        return JobStatus.Failed;
       }
 
       let partialFallbackSuccess = false;
@@ -531,7 +547,7 @@ export class MediaService extends BaseService {
 
       if (!partialFallbackSuccess) {
         this.logger.error(`Retrying with ${ffmpeg.accel.toUpperCase()} acceleration disabled`);
-        ffmpeg = { ...ffmpeg, accel: TranscodeHWAccel.DISABLED };
+        ffmpeg = { ...ffmpeg, accel: TranscodeHardwareAcceleration.Disabled };
         const command = BaseConfig.create(ffmpeg, this.videoInterfaces).getCommand(target, videoStream, audioStream);
         await this.mediaRepository.transcode(input, output, command);
       }
@@ -541,13 +557,13 @@ export class MediaService extends BaseService {
 
     await this.assetRepository.update({ id: asset.id, encodedVideoPath: output });
 
-    return JobStatus.SUCCESS;
+    return JobStatus.Success;
   }
 
   private getMainStream<T extends VideoStreamInfo | AudioStreamInfo>(streams: T[]): T {
     return streams
       .filter((stream) => stream.codecName !== 'unknown')
-      .sort((stream1, stream2) => stream2.frameCount - stream1.frameCount)[0];
+      .toSorted((stream1, stream2) => stream2.bitrate - stream1.bitrate)[0];
   }
 
   private getTranscodeTarget(
@@ -559,18 +575,18 @@ export class MediaService extends BaseService {
     const isVideoTranscodeRequired = this.isVideoTranscodeRequired(config, videoStream);
 
     if (isAudioTranscodeRequired && isVideoTranscodeRequired) {
-      return TranscodeTarget.ALL;
+      return TranscodeTarget.All;
     }
 
     if (isAudioTranscodeRequired) {
-      return TranscodeTarget.AUDIO;
+      return TranscodeTarget.Audio;
     }
 
     if (isVideoTranscodeRequired) {
-      return TranscodeTarget.VIDEO;
+      return TranscodeTarget.Video;
     }
 
-    return TranscodeTarget.NONE;
+    return TranscodeTarget.None;
   }
 
   private isAudioTranscodeRequired(ffmpegConfig: SystemConfigFFmpegDto, stream?: AudioStreamInfo): boolean {
@@ -579,15 +595,15 @@ export class MediaService extends BaseService {
     }
 
     switch (ffmpegConfig.transcode) {
-      case TranscodePolicy.DISABLED: {
+      case TranscodePolicy.Disabled: {
         return false;
       }
-      case TranscodePolicy.ALL: {
+      case TranscodePolicy.All: {
         return true;
       }
-      case TranscodePolicy.REQUIRED:
-      case TranscodePolicy.OPTIMAL:
-      case TranscodePolicy.BITRATE: {
+      case TranscodePolicy.Required:
+      case TranscodePolicy.Optimal:
+      case TranscodePolicy.Bitrate: {
         return !ffmpegConfig.acceptedAudioCodecs.includes(stream.codecName as AudioCodec);
       }
       default: {
@@ -606,19 +622,19 @@ export class MediaService extends BaseService {
     const isRequired = !isTargetVideoCodec || !stream.pixelFormat.endsWith('420p');
 
     switch (ffmpegConfig.transcode) {
-      case TranscodePolicy.DISABLED: {
+      case TranscodePolicy.Disabled: {
         return false;
       }
-      case TranscodePolicy.ALL: {
+      case TranscodePolicy.All: {
         return true;
       }
-      case TranscodePolicy.REQUIRED: {
+      case TranscodePolicy.Required: {
         return isRequired;
       }
-      case TranscodePolicy.OPTIMAL: {
+      case TranscodePolicy.Optimal: {
         return isRequired || isLargerThanTargetRes;
       }
-      case TranscodePolicy.BITRATE: {
+      case TranscodePolicy.Bitrate: {
         return isRequired || isLargerThanTargetBitrate;
       }
       default: {
@@ -628,12 +644,12 @@ export class MediaService extends BaseService {
   }
 
   private isRemuxRequired(ffmpegConfig: SystemConfigFFmpegDto, { formatName, formatLongName }: VideoFormat): boolean {
-    if (ffmpegConfig.transcode === TranscodePolicy.DISABLED) {
+    if (ffmpegConfig.transcode === TranscodePolicy.Disabled) {
       return false;
     }
 
-    const name = formatLongName === 'QuickTime / MOV' ? VideoContainer.MOV : (formatName as VideoContainer);
-    return name !== VideoContainer.MP4 && !ffmpegConfig.acceptedContainers.includes(name);
+    const name = formatLongName === 'QuickTime / MOV' ? VideoContainer.Mov : (formatName as VideoContainer);
+    return name !== VideoContainer.Mp4 && !ffmpegConfig.acceptedContainers.includes(name);
   }
 
   isSRGB({ colorspace, profileDescription, bitsPerSample }: Exif): boolean {

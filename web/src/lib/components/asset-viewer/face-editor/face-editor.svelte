@@ -1,13 +1,11 @@
 <script lang="ts">
   import ImageThumbnail from '$lib/components/assets/thumbnail/image-thumbnail.svelte';
-  import { notificationController } from '$lib/components/shared-components/notification/notification';
-  import { modalManager } from '$lib/managers/modal-manager.svelte';
   import { assetViewingStore } from '$lib/stores/asset-viewing.store';
   import { isFaceEditMode } from '$lib/stores/face-edit.svelte';
   import { getPeopleThumbnailUrl } from '$lib/utils';
   import { handleError } from '$lib/utils/handle-error';
   import { createFace, getAllPeople, type PersonResponseDto } from '@immich/sdk';
-  import { Button, Input } from '@immich/ui';
+  import { Button, Input, modalManager, toastManager } from '@immich/ui';
   import { Canvas, InteractiveFabricObject, Rect } from 'fabric';
   import { onMount } from 'svelte';
   import { t } from 'svelte-i18n';
@@ -57,6 +55,7 @@
     canvas = new Canvas(canvasEl);
     configureControlStyle();
 
+    // eslint-disable-next-line tscompat/tscompat
     faceRect = new Rect({
       fill: 'rgba(66,80,175,0.25)',
       stroke: 'rgb(66,80,175)',
@@ -278,13 +277,16 @@
     try {
       const data = getFaceCroppedCoordinates();
       if (!data) {
-        notificationController.show({
-          message: 'Error tagging face - cannot get bounding box coordinates',
-        });
+        toastManager.warning($t('error_tag_face_bounding_box'));
         return;
       }
 
-      const isConfirmed = await modalManager.showDialog({ prompt: `Do you want to tag this face as ${person.name}?` });
+      const isConfirmed = await modalManager.showDialog({
+        prompt: person.name
+          ? $t('confirm_tag_face', { values: { name: person.name } })
+          : $t('confirm_tag_face_unnamed'),
+      });
+
       if (!isConfirmed) {
         return;
       }
@@ -317,10 +319,10 @@
     <p class="text-center text-sm">{$t('select_person_to_tag')}</p>
 
     <div class="my-3 relative">
-      <Input placeholder="Search person..." bind:value={searchTerm} size="tiny" />
+      <Input placeholder={$t('search_people')} bind:value={searchTerm} size="tiny" />
     </div>
 
-    <div class="h-[250px] overflow-y-auto mt-2">
+    <div class="h-62.5 overflow-y-auto mt-2">
       {#if filteredCandidates.length > 0}
         <div class="mt-2 rounded-lg">
           {#each filteredCandidates as person (person.id)}
