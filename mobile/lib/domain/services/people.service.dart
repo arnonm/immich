@@ -10,12 +10,16 @@ class DriftPeopleService {
 
   const DriftPeopleService(this._repository, this._personApiRepository);
 
+  Future<DriftPerson?> get(String personId) {
+    return _repository.get(personId);
+  }
+
   Future<List<DriftPerson>> getAssetPeople(String assetId) {
     return _repository.getAssetPeople(assetId);
   }
 
-  Future<List<DriftPerson>> getAllPeople() {
-    return _repository.getAllPeople();
+  Future<List<DriftPerson>> getAllPeople({int minFaces = 3}) {
+    return _repository.getAllPeople(minFaces: minFaces);
   }
 
   Future<int> updateName(String personId, String name) async {

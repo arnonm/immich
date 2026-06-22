@@ -1,124 +1,135 @@
-import { Type } from 'class-transformer';
-import { IsNotEmpty, IsObject, IsString, IsUUID, ValidateNested } from 'class-validator';
-import { WorkflowAction, WorkflowFilter } from 'src/database';
-import { PluginTriggerType } from 'src/enum';
-import type { ActionConfig, FilterConfig } from 'src/types/plugin-schema.types';
-import { Optional, ValidateBoolean, ValidateEnum } from 'src/validation';
+import type { WorkflowStepConfig, WorkflowTrigger } from '@immich/plugin-sdk';
+import { createZodDto } from 'nestjs-zod';
+import { WorkflowTriggerSchema, WorkflowTypeSchema } from 'src/enum';
+import z from 'zod';
 
-export class WorkflowFilterItemDto {
-  @IsUUID()
-  pluginFilterId!: string;
+const WorkflowTriggerResponseSchema = z
+  .object({
+    trigger: WorkflowTriggerSchema.describe('Trigger type'),
+    types: z.array(WorkflowTypeSchema).describe('Workflow types'),
+  })
+  .meta({ id: 'WorkflowTriggerResponseDto' });
 
-  @IsObject()
-  @Optional()
-  filterConfig?: FilterConfig;
-}
+const WorkflowSearchSchema = z
+  .object({
+    id: z.uuidv4().optional().describe('Workflow ID'),
+    trigger: WorkflowTriggerSchema.optional().describe('Workflow trigger type'),
+    name: z.string().optional().describe('Workflow name'),
+    description: z.string().optional().describe('Workflow description'),
+    enabled: z.boolean().optional().describe('Workflow enabled'),
+  })
+  .meta({ id: 'WorkflowSearchDto' });
 
-export class WorkflowActionItemDto {
-  @IsUUID()
-  pluginActionId!: string;
+const WorkflowStepSchema = z
+  .object({
+    method: z.string().describe('Step plugin method'),
+    config: z.record(z.string(), z.unknown()).nullable().describe('Step configuration'),
+    enabled: z.boolean().optional().describe('Step is enabled'),
+  })
+  .meta({ id: 'WorkflowStepDto' });
 
-  @IsObject()
-  @Optional()
-  actionConfig?: ActionConfig;
-}
+const WorkflowShareStepSchema = z
+  .object({
+    method: z.string().describe('Step plugin method'),
+    config: z.record(z.string(), z.unknown()).nullable().describe('Step configuration'),
+    enabled: z.boolean().optional().describe('Step is enabled'),
+  })
+  .meta({ id: 'WorkflowShareStepDto' });
 
-export class WorkflowCreateDto {
-  @ValidateEnum({ enum: PluginTriggerType, name: 'PluginTriggerType' })
-  triggerType!: PluginTriggerType;
+const WorkflowCreateSchema = z
+  .object({
+    trigger: WorkflowTriggerSchema.describe('Workflow trigger type'),
+    name: z.string().nullable().optional().describe('Workflow name'),
+    description: z.string().nullable().optional().describe('Workflow description'),
+    enabled: z.boolean().optional().describe('Workflow enabled'),
+    steps: z.array(WorkflowStepSchema).optional(),
+  })
+  .meta({ id: 'WorkflowCreateDto' });
 
-  @IsString()
-  @IsNotEmpty()
-  name!: string;
+const WorkflowUpdateSchema = z
+  .object({
+    trigger: WorkflowTriggerSchema.optional().describe('Workflow trigger type'),
+    name: z.string().nullable().optional().describe('Workflow name'),
+    description: z.string().nullable().optional().describe('Workflow description'),
+    enabled: z.boolean().optional().describe('Workflow enabled'),
+    steps: z.array(WorkflowStepSchema).optional(),
+  })
+  .meta({ id: 'WorkflowUpdateDto' });
 
-  @IsString()
-  @Optional()
-  description?: string;
+const WorkflowResponseSchema = z
+  .object({
+    id: z.uuidv4().describe('Workflow ID'),
+    trigger: WorkflowTriggerSchema.describe('Workflow trigger type'),
+    name: z.string().nullable().describe('Workflow name'),
+    description: z.string().nullable().describe('Workflow description'),
+    createdAt: z.string().describe('Creation date'),
+    updatedAt: z.string().describe('Update date'),
+    enabled: z.boolean().describe('Workflow enabled'),
+    steps: z.array(WorkflowStepSchema).describe('Workflow steps'),
+  })
+  .meta({ id: 'WorkflowResponseDto' });
 
-  @ValidateBoolean({ optional: true })
-  enabled?: boolean;
+const WorkflowShareResponseSchema = z
+  .object({
+    trigger: WorkflowTriggerSchema.describe('Workflow trigger type'),
+    name: z.string().nullable().describe('Workflow name'),
+    description: z.string().nullable().describe('Workflow description'),
+    steps: z.array(WorkflowShareStepSchema).describe('Workflow steps'),
+  })
+  .meta({ id: 'WorkflowShareResponseDto' });
 
-  @ValidateNested({ each: true })
-  @Type(() => WorkflowFilterItemDto)
-  filters!: WorkflowFilterItemDto[];
+export class WorkflowTriggerResponseDto extends createZodDto(WorkflowTriggerResponseSchema) {}
+export class WorkflowSearchDto extends createZodDto(WorkflowSearchSchema) {}
+export class WorkflowCreateDto extends createZodDto(WorkflowCreateSchema) {}
+export class WorkflowUpdateDto extends createZodDto(WorkflowUpdateSchema) {}
+export class WorkflowResponseDto extends createZodDto(WorkflowResponseSchema) {}
+export class WorkflowShareResponseDto extends createZodDto(WorkflowShareResponseSchema) {}
 
-  @ValidateNested({ each: true })
-  @Type(() => WorkflowActionItemDto)
-  actions!: WorkflowActionItemDto[];
-}
+type Workflow = {
+  id: string;
+  createdAt: Date;
+  updatedAt: Date;
+  trigger: WorkflowTrigger;
+  name: string | null;
+  description: string | null;
+  enabled: boolean;
+};
 
-export class WorkflowUpdateDto {
-  @ValidateEnum({ enum: PluginTriggerType, name: 'PluginTriggerType', optional: true })
-  triggerType?: PluginTriggerType;
+type WorkflowStep = {
+  enabled: boolean;
+  methodName: string;
+  config: WorkflowStepConfig | null;
+  pluginName: string;
+};
 
-  @IsString()
-  @IsNotEmpty()
-  @Optional()
-  name?: string;
-
-  @IsString()
-  @Optional()
-  description?: string;
-
-  @ValidateBoolean({ optional: true })
-  enabled?: boolean;
-
-  @ValidateNested({ each: true })
-  @Type(() => WorkflowFilterItemDto)
-  @Optional()
-  filters?: WorkflowFilterItemDto[];
-
-  @ValidateNested({ each: true })
-  @Type(() => WorkflowActionItemDto)
-  @Optional()
-  actions?: WorkflowActionItemDto[];
-}
-
-export class WorkflowResponseDto {
-  id!: string;
-  ownerId!: string;
-  @ValidateEnum({ enum: PluginTriggerType, name: 'PluginTriggerType' })
-  triggerType!: PluginTriggerType;
-  name!: string | null;
-  description!: string;
-  createdAt!: string;
-  enabled!: boolean;
-  filters!: WorkflowFilterResponseDto[];
-  actions!: WorkflowActionResponseDto[];
-}
-
-export class WorkflowFilterResponseDto {
-  id!: string;
-  workflowId!: string;
-  pluginFilterId!: string;
-  filterConfig!: FilterConfig | null;
-  order!: number;
-}
-
-export class WorkflowActionResponseDto {
-  id!: string;
-  workflowId!: string;
-  pluginActionId!: string;
-  actionConfig!: ActionConfig | null;
-  order!: number;
-}
-
-export function mapWorkflowFilter(filter: WorkflowFilter): WorkflowFilterResponseDto {
+export const mapWorkflow = (workflow: Workflow & { steps: WorkflowStep[] }): WorkflowResponseDto => {
   return {
-    id: filter.id,
-    workflowId: filter.workflowId,
-    pluginFilterId: filter.pluginFilterId,
-    filterConfig: filter.filterConfig,
-    order: filter.order,
+    id: workflow.id,
+    enabled: workflow.enabled,
+    trigger: workflow.trigger,
+    name: workflow.name,
+    description: workflow.description,
+    createdAt: workflow.createdAt.toISOString(),
+    updatedAt: workflow.updatedAt.toISOString(),
+    steps: workflow.steps.map((step) => ({
+      method: `${step.pluginName}#${step.methodName}`,
+      // TODO fix this
+      config: step.config as any,
+      enabled: step.enabled,
+    })),
   };
-}
+};
 
-export function mapWorkflowAction(action: WorkflowAction): WorkflowActionResponseDto {
+export const mapWorkflowShare = (workflow: Workflow & { steps: WorkflowStep[] }): WorkflowShareResponseDto => {
   return {
-    id: action.id,
-    workflowId: action.workflowId,
-    pluginActionId: action.pluginActionId,
-    actionConfig: action.actionConfig,
-    order: action.order,
+    trigger: workflow.trigger,
+    name: workflow.name,
+    description: workflow.description,
+    steps: workflow.steps.map((step) => ({
+      method: `${step.pluginName}#${step.methodName}`,
+      // TODO fix this
+      config: step.config as any,
+      enabled: step.enabled ? undefined : false,
+    })),
   };
-}
+};

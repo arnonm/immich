@@ -1,7 +1,7 @@
 import { jwtVerify } from 'jose';
-import { SystemMetadataKey } from 'src/enum';
+import { MaintenanceAction, SystemMetadataKey } from 'src/enum';
 import { CliService } from 'src/services/cli.service';
-import { factory } from 'test/small.factory';
+import { UserFactory } from 'test/factories/user.factory';
 import { newTestService, ServiceMocks } from 'test/utils';
 import { describe, it } from 'vitest';
 
@@ -15,7 +15,7 @@ describe(CliService.name, () => {
 
   describe('listUsers', () => {
     it('should list users', async () => {
-      mocks.user.getList.mockResolvedValue([factory.userAdmin({ isAdmin: true })]);
+      mocks.user.getList.mockResolvedValue([UserFactory.create({ isAdmin: true })]);
       await expect(sut.listUsers()).resolves.toEqual([expect.objectContaining({ isAdmin: true })]);
       expect(mocks.user.getList).toHaveBeenCalledWith({ withDeleted: true });
     });
@@ -32,10 +32,10 @@ describe(CliService.name, () => {
     });
 
     it('should default to a random password', async () => {
-      const admin = factory.userAdmin({ isAdmin: true });
+      const admin = UserFactory.create({ isAdmin: true });
 
       mocks.user.getAdmin.mockResolvedValue(admin);
-      mocks.user.update.mockResolvedValue(factory.userAdmin({ isAdmin: true }));
+      mocks.user.update.mockResolvedValue(UserFactory.create({ isAdmin: true }));
 
       const ask = vitest.fn().mockImplementation(() => {});
 
@@ -50,7 +50,7 @@ describe(CliService.name, () => {
     });
 
     it('should use the supplied password', async () => {
-      const admin = factory.userAdmin({ isAdmin: true });
+      const admin = UserFactory.create({ isAdmin: true });
 
       mocks.user.getAdmin.mockResolvedValue(admin);
       mocks.user.update.mockResolvedValue(admin);
@@ -95,7 +95,14 @@ describe(CliService.name, () => {
     });
 
     it('should disable maintenance mode', async () => {
-      mocks.systemMetadata.get.mockResolvedValue({ isMaintenanceMode: true, secret: 'secret' });
+      mocks.systemMetadata.get.mockResolvedValue({
+        isMaintenanceMode: true,
+        secret: 'secret',
+        action: {
+          action: MaintenanceAction.Start,
+        },
+      });
+
       await expect(sut.disableMaintenanceMode()).resolves.toEqual({
         alreadyDisabled: false,
       });
@@ -109,7 +116,14 @@ describe(CliService.name, () => {
 
   describe('enableMaintenanceMode', () => {
     it('should not do anything if in maintenance mode', async () => {
-      mocks.systemMetadata.get.mockResolvedValue({ isMaintenanceMode: true, secret: 'secret' });
+      mocks.systemMetadata.get.mockResolvedValue({
+        isMaintenanceMode: true,
+        secret: 'secret',
+        action: {
+          action: MaintenanceAction.Start,
+        },
+      });
+
       await expect(sut.enableMaintenanceMode()).resolves.toEqual(
         expect.objectContaining({
           alreadyEnabled: true,
@@ -133,13 +147,22 @@ describe(CliService.name, () => {
       expect(mocks.systemMetadata.set).toHaveBeenCalledWith(SystemMetadataKey.MaintenanceMode, {
         isMaintenanceMode: true,
         secret: expect.stringMatching(/^\w{128}$/),
+        action: {
+          action: 'start',
+        },
       });
     });
 
     const RE_LOGIN_URL = /https:\/\/my.immich.app\/maintenance\?token=([A-Za-z0-9-_]*\.[A-Za-z0-9-_]*\.[A-Za-z0-9-_]*)/;
 
     it('should return a valid login URL', async () => {
-      mocks.systemMetadata.get.mockResolvedValue({ isMaintenanceMode: true, secret: 'secret' });
+      mocks.systemMetadata.get.mockResolvedValue({
+        isMaintenanceMode: true,
+        secret: 'secret',
+        action: {
+          action: MaintenanceAction.Start,
+        },
+      });
 
       const result = await sut.enableMaintenanceMode();
 

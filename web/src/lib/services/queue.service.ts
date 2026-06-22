@@ -1,11 +1,3 @@
-import { goto } from '$app/navigation';
-import { AppRoute } from '$lib/constants';
-import { eventManager } from '$lib/managers/event-manager.svelte';
-import { queueManager } from '$lib/managers/queue-manager.svelte';
-import JobCreateModal from '$lib/modals/JobCreateModal.svelte';
-import type { HeaderButtonActionItem } from '$lib/types';
-import { handleError } from '$lib/utils/handle-error';
-import { getFormatter } from '$lib/utils/i18n';
 import {
   emptyQueue,
   getQueue,
@@ -22,6 +14,7 @@ import {
   mdiContentDuplicate,
   mdiDatabaseOutline,
   mdiFaceRecognition,
+  mdiFileCheckOutline,
   mdiFileJpgBox,
   mdiFileXmlBox,
   mdiFolderMove,
@@ -29,6 +22,7 @@ import {
   mdiLibraryShelves,
   mdiOcr,
   mdiPause,
+  mdiPencil,
   mdiPlay,
   mdiPlus,
   mdiStateMachine,
@@ -39,6 +33,15 @@ import {
   mdiVideo,
 } from '@mdi/js';
 import type { MessageFormatter } from 'svelte-i18n';
+import { goto } from '$app/navigation';
+import { OpenQueryParam } from '$lib/constants';
+import { eventManager } from '$lib/managers/event-manager.svelte';
+import { queueManager } from '$lib/managers/queue-manager.svelte';
+import JobCreateModal from '$lib/modals/JobCreateModal.svelte';
+import { Route } from '$lib/route';
+import type { HeaderButtonActionItem } from '$lib/types';
+import { handleError } from '$lib/utils/handle-error';
+import { getFormatter } from '$lib/utils/i18n';
 
 type QueueItem = {
   icon: IconLike;
@@ -62,19 +65,15 @@ export const getQueuesActions = ($t: MessageFormatter, queues: QueueResponseDto[
   const CreateJob: ActionItem = {
     icon: mdiPlus,
     title: $t('admin.create_job'),
-    type: $t('command'),
     shortcuts: { shift: true, key: 'n' },
-    onAction: async () => {
-      await modalManager.show(JobCreateModal, {});
-    },
+    onAction: () => modalManager.show(JobCreateModal, {}),
   };
 
   const ManageConcurrency: ActionItem = {
     icon: mdiCog,
     title: $t('admin.manage_concurrency'),
     description: $t('admin.manage_concurrency_description'),
-    type: $t('page'),
-    onAction: () => goto(`${AppRoute.ADMIN_SETTINGS}?isOpen=job`),
+    onAction: () => goto(Route.systemSettings({ isOpen: OpenQueryParam.JOB })),
   };
 
   return { ResumePaused, ManageConcurrency, CreateJob };
@@ -129,7 +128,7 @@ export const handleEmptyQueue = async (queue: QueueResponseDto) => {
     await emptyQueue({ name: queue.name, queueDeleteDto: { failed: false } });
     const response = await getQueue({ name: queue.name });
     eventManager.emit('QueueUpdate', response);
-    toastManager.success($t('admin.cleared_jobs', { values: { job: item.title } }));
+    toastManager.primary($t('admin.cleared_jobs', { values: { job: item.title } }));
   } catch (error) {
     handleError(error, $t('errors.something_went_wrong'));
   }
@@ -155,7 +154,7 @@ const handleRemoveFailedJobs = async (queue: QueueResponseDto) => {
     await emptyQueue({ name: queue.name, queueDeleteDto: { failed: true } });
     const response = await getQueue({ name: queue.name });
     eventManager.emit('QueueUpdate', response);
-    toastManager.success();
+    toastManager.primary();
   } catch (error) {
     handleError(error, $t('errors.something_went_wrong'));
   }
@@ -243,26 +242,15 @@ export const asQueueItem = ($t: MessageFormatter, queue: { name: QueueName }): Q
       icon: mdiStateMachine,
       title: $t('workflows'),
     },
+    [QueueName.IntegrityCheck]: {
+      icon: mdiFileCheckOutline,
+      title: $t('integrity_checks'),
+    },
+    [QueueName.Editor]: {
+      icon: mdiPencil,
+      title: $t('editor'),
+    },
   };
 
   return items[queue.name];
-};
-
-export const asQueueSlug = (name: QueueName) => {
-  return name.replaceAll(/[A-Z]/g, (m) => '-' + m.toLowerCase());
-};
-
-export const fromQueueSlug = (slug: string): QueueName | undefined => {
-  const name = slug.replaceAll(/-([a-z])/g, (_, c) => c.toUpperCase());
-  if (Object.values(QueueName).includes(name as QueueName)) {
-    return name as QueueName;
-  }
-};
-
-export const getQueueDetailUrl = (queue: QueueResponseDto) => {
-  return `${AppRoute.ADMIN_QUEUES}/${asQueueSlug(queue.name)}`;
-};
-
-export const handleViewQueue = (queue: QueueResponseDto) => {
-  return goto(getQueueDetailUrl(queue));
 };

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:immich_mobile/domain/utils/migrate_cloud_ids.dart' as m;
 import 'package:immich_mobile/domain/utils/sync_linked_album.dart';
 import 'package:immich_mobile/providers/infrastructure/sync.provider.dart';
 import 'package:immich_mobile/utils/isolate.dart';
@@ -22,8 +23,13 @@ class BackgroundSyncManager {
   final SyncCallback? onHashingComplete;
   final SyncErrorCallback? onHashingError;
 
+  final SyncCallback? onCloudIdSyncStart;
+  final SyncCallback? onCloudIdSyncComplete;
+  final SyncErrorCallback? onCloudIdSyncError;
+
   Cancelable<bool?>? _syncTask;
   Cancelable<void>? _syncWebsocketTask;
+  Cancelable<void>? _cloudIdSyncTask;
   Cancelable<void>? _deviceAlbumSyncTask;
   Cancelable<void>? _linkedAlbumSyncTask;
   Cancelable<void>? _hashTask;
@@ -38,50 +44,33 @@ class BackgroundSyncManager {
     this.onHashingStart,
     this.onHashingComplete,
     this.onHashingError,
+    this.onCloudIdSyncStart,
+    this.onCloudIdSyncComplete,
+    this.onCloudIdSyncError,
   });
 
   Future<void> cancel() async {
-    final futures = <Future>[];
-
-    if (_syncTask != null) {
-      futures.add(_syncTask!.future);
+    final tasks = [
+      _syncTask,
+      _syncWebsocketTask,
+      _cloudIdSyncTask,
+      _linkedAlbumSyncTask,
+      _deviceAlbumSyncTask,
+      _hashTask,
+    ];
+    final futures = [
+      for (final task in tasks)
+        if (task != null) task.future,
+    ];
+    for (final task in tasks) {
+      task?.cancel();
     }
-    _syncTask?.cancel();
     _syncTask = null;
-
-    if (_syncWebsocketTask != null) {
-      futures.add(_syncWebsocketTask!.future);
-    }
-    _syncWebsocketTask?.cancel();
     _syncWebsocketTask = null;
-
-    if (_linkedAlbumSyncTask != null) {
-      futures.add(_linkedAlbumSyncTask!.future);
-    }
-    _linkedAlbumSyncTask?.cancel();
+    _cloudIdSyncTask = null;
     _linkedAlbumSyncTask = null;
-
-    try {
-      await Future.wait(futures);
-    } on CanceledError {
-      // Ignore cancellation errors
-    }
-  }
-
-  Future<void> cancelLocal() async {
-    final futures = <Future>[];
-
-    if (_hashTask != null) {
-      futures.add(_hashTask!.future);
-    }
-    _hashTask?.cancel();
-    _hashTask = null;
-
-    if (_deviceAlbumSyncTask != null) {
-      futures.add(_deviceAlbumSyncTask!.future);
-    }
-    _deviceAlbumSyncTask?.cancel();
     _deviceAlbumSyncTask = null;
+    _hashTask = null;
 
     try {
       await Future.wait(futures);
@@ -121,7 +110,6 @@ class BackgroundSyncManager {
         });
   }
 
-  // No need to cancel the task, as it can also be run when the user logs out
   Future<void> hashAssets() {
     if (_hashTask != null) {
       return _hashTask!.future;
@@ -172,11 +160,41 @@ class BackgroundSyncManager {
         });
   }
 
-  Future<void> syncWebsocketBatch(List<dynamic> batchData) {
+  Future<void> syncWebsocketBatchV1(List<dynamic> batchData) {
     if (_syncWebsocketTask != null) {
       return _syncWebsocketTask!.future;
     }
     _syncWebsocketTask = _handleWsAssetUploadReadyV1Batch(batchData);
+    return _syncWebsocketTask!.whenComplete(() {
+      _syncWebsocketTask = null;
+    });
+  }
+
+  Future<void> syncWebsocketBatchV2(List<dynamic> batchData) {
+    if (_syncWebsocketTask != null) {
+      return _syncWebsocketTask!.future;
+    }
+    _syncWebsocketTask = _handleWsAssetUploadReadyV2Batch(batchData);
+    return _syncWebsocketTask!.whenComplete(() {
+      _syncWebsocketTask = null;
+    });
+  }
+
+  Future<void> syncWebsocketEditV1(dynamic data) {
+    if (_syncWebsocketTask != null) {
+      return _syncWebsocketTask!.future;
+    }
+    _syncWebsocketTask = _handleWsAssetEditReadyV1(data);
+    return _syncWebsocketTask!.whenComplete(() {
+      _syncWebsocketTask = null;
+    });
+  }
+
+  Future<void> syncWebsocketEditV2(dynamic data) {
+    if (_syncWebsocketTask != null) {
+      return _syncWebsocketTask!.future;
+    }
+    _syncWebsocketTask = _handleWsAssetEditReadyV2(data);
     return _syncWebsocketTask!.whenComplete(() {
       _syncWebsocketTask = null;
     });
@@ -192,9 +210,43 @@ class BackgroundSyncManager {
       _linkedAlbumSyncTask = null;
     });
   }
+
+  Future<void> syncCloudIds() {
+    if (_cloudIdSyncTask != null) {
+      return _cloudIdSyncTask!.future;
+    }
+
+    onCloudIdSyncStart?.call();
+
+    _cloudIdSyncTask = runInIsolateGentle(computation: m.syncCloudIds);
+    return _cloudIdSyncTask!
+        .whenComplete(() {
+          onCloudIdSyncComplete?.call();
+          _cloudIdSyncTask = null;
+        })
+        .catchError((error) {
+          onCloudIdSyncError?.call(error.toString());
+          _cloudIdSyncTask = null;
+        });
+  }
 }
 
 Cancelable<void> _handleWsAssetUploadReadyV1Batch(List<dynamic> batchData) => runInIsolateGentle(
   computation: (ref) => ref.read(syncStreamServiceProvider).handleWsAssetUploadReadyV1Batch(batchData),
   debugLabel: 'websocket-batch',
+);
+
+Cancelable<void> _handleWsAssetUploadReadyV2Batch(List<dynamic> batchData) => runInIsolateGentle(
+  computation: (ref) => ref.read(syncStreamServiceProvider).handleWsAssetUploadReadyV2Batch(batchData),
+  debugLabel: 'websocket-batch',
+);
+
+Cancelable<void> _handleWsAssetEditReadyV1(dynamic data) => runInIsolateGentle(
+  computation: (ref) => ref.read(syncStreamServiceProvider).handleWsAssetEditReadyV1(data),
+  debugLabel: 'websocket-edit',
+);
+
+Cancelable<void> _handleWsAssetEditReadyV2(dynamic data) => runInIsolateGentle(
+  computation: (ref) => ref.read(syncStreamServiceProvider).handleWsAssetEditReadyV2(data),
+  debugLabel: 'websocket-edit',
 );

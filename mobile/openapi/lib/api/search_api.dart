@@ -21,7 +21,7 @@ class SearchApi {
   /// Retrieve a list of assets with each asset belonging to a different city. This endpoint is used on the places pages to show a single thumbnail for each city the user has assets in.
   ///
   /// Note: This method returns the HTTP [Response].
-  Future<Response> getAssetsByCityWithHttpInfo() async {
+  Future<Response> getAssetsByCityWithHttpInfo({ Future<void>? abortTrigger, }) async {
     // ignore: prefer_const_declarations
     final apiPath = r'/search/cities';
 
@@ -43,14 +43,15 @@ class SearchApi {
       headerParams,
       formParams,
       contentTypes.isEmpty ? null : contentTypes.first,
+      abortTrigger: abortTrigger,
     );
   }
 
   /// Retrieve assets by city
   ///
   /// Retrieve a list of assets with each asset belonging to a different city. This endpoint is used on the places pages to show a single thumbnail for each city the user has assets in.
-  Future<List<AssetResponseDto>?> getAssetsByCity() async {
-    final response = await getAssetsByCityWithHttpInfo();
+  Future<List<AssetResponseDto>?> getAssetsByCity({ Future<void>? abortTrigger, }) async {
+    final response = await getAssetsByCityWithHttpInfo(abortTrigger: abortTrigger,);
     if (response.statusCode >= HttpStatus.badRequest) {
       throw ApiException(response.statusCode, await _decodeBodyBytes(response));
     }
@@ -72,7 +73,7 @@ class SearchApi {
   /// Retrieve data for the explore section, such as popular people and places.
   ///
   /// Note: This method returns the HTTP [Response].
-  Future<Response> getExploreDataWithHttpInfo() async {
+  Future<Response> getExploreDataWithHttpInfo({ Future<void>? abortTrigger, }) async {
     // ignore: prefer_const_declarations
     final apiPath = r'/search/explore';
 
@@ -94,14 +95,15 @@ class SearchApi {
       headerParams,
       formParams,
       contentTypes.isEmpty ? null : contentTypes.first,
+      abortTrigger: abortTrigger,
     );
   }
 
   /// Retrieve explore data
   ///
   /// Retrieve data for the explore section, such as popular people and places.
-  Future<List<SearchExploreResponseDto>?> getExploreData() async {
-    final response = await getExploreDataWithHttpInfo();
+  Future<List<SearchExploreResponseDto>?> getExploreData({ Future<void>? abortTrigger, }) async {
+    final response = await getExploreDataWithHttpInfo(abortTrigger: abortTrigger,);
     if (response.statusCode >= HttpStatus.badRequest) {
       throw ApiException(response.statusCode, await _decodeBodyBytes(response));
     }
@@ -129,17 +131,23 @@ class SearchApi {
   /// * [SearchSuggestionType] type (required):
   ///
   /// * [String] country:
+  ///   Filter by country
   ///
   /// * [bool] includeNull:
+  ///   Include null values in suggestions
   ///
   /// * [String] lensModel:
+  ///   Filter by lens model
   ///
   /// * [String] make:
+  ///   Filter by camera make
   ///
   /// * [String] model:
+  ///   Filter by camera model
   ///
   /// * [String] state:
-  Future<Response> getSearchSuggestionsWithHttpInfo(SearchSuggestionType type, { String? country, bool? includeNull, String? lensModel, String? make, String? model, String? state, }) async {
+  ///   Filter by state/province
+  Future<Response> getSearchSuggestionsWithHttpInfo(SearchSuggestionType type, { String? country, bool? includeNull, String? lensModel, String? make, String? model, String? state, Future<void>? abortTrigger, }) async {
     // ignore: prefer_const_declarations
     final apiPath = r'/search/suggestions';
 
@@ -181,6 +189,7 @@ class SearchApi {
       headerParams,
       formParams,
       contentTypes.isEmpty ? null : contentTypes.first,
+      abortTrigger: abortTrigger,
     );
   }
 
@@ -193,18 +202,24 @@ class SearchApi {
   /// * [SearchSuggestionType] type (required):
   ///
   /// * [String] country:
+  ///   Filter by country
   ///
   /// * [bool] includeNull:
+  ///   Include null values in suggestions
   ///
   /// * [String] lensModel:
+  ///   Filter by lens model
   ///
   /// * [String] make:
+  ///   Filter by camera make
   ///
   /// * [String] model:
+  ///   Filter by camera model
   ///
   /// * [String] state:
-  Future<List<String>?> getSearchSuggestions(SearchSuggestionType type, { String? country, bool? includeNull, String? lensModel, String? make, String? model, String? state, }) async {
-    final response = await getSearchSuggestionsWithHttpInfo(type,  country: country, includeNull: includeNull, lensModel: lensModel, make: make, model: model, state: state, );
+  ///   Filter by state/province
+  Future<List<String>?> getSearchSuggestions(SearchSuggestionType type, { String? country, bool? includeNull, String? lensModel, String? make, String? model, String? state, Future<void>? abortTrigger, }) async {
+    final response = await getSearchSuggestionsWithHttpInfo(type, country: country, includeNull: includeNull, lensModel: lensModel, make: make, model: model, state: state, abortTrigger: abortTrigger,);
     if (response.statusCode >= HttpStatus.badRequest) {
       throw ApiException(response.statusCode, await _decodeBodyBytes(response));
     }
@@ -230,7 +245,7 @@ class SearchApi {
   /// Parameters:
   ///
   /// * [StatisticsSearchDto] statisticsSearchDto (required):
-  Future<Response> searchAssetStatisticsWithHttpInfo(StatisticsSearchDto statisticsSearchDto,) async {
+  Future<Response> searchAssetStatisticsWithHttpInfo(StatisticsSearchDto statisticsSearchDto, { Future<void>? abortTrigger, }) async {
     // ignore: prefer_const_declarations
     final apiPath = r'/search/statistics';
 
@@ -252,6 +267,7 @@ class SearchApi {
       headerParams,
       formParams,
       contentTypes.isEmpty ? null : contentTypes.first,
+      abortTrigger: abortTrigger,
     );
   }
 
@@ -262,8 +278,8 @@ class SearchApi {
   /// Parameters:
   ///
   /// * [StatisticsSearchDto] statisticsSearchDto (required):
-  Future<SearchStatisticsResponseDto?> searchAssetStatistics(StatisticsSearchDto statisticsSearchDto,) async {
-    final response = await searchAssetStatisticsWithHttpInfo(statisticsSearchDto,);
+  Future<SearchStatisticsResponseDto?> searchAssetStatistics(StatisticsSearchDto statisticsSearchDto, { Future<void>? abortTrigger, }) async {
+    final response = await searchAssetStatisticsWithHttpInfo(statisticsSearchDto, abortTrigger: abortTrigger,);
     if (response.statusCode >= HttpStatus.badRequest) {
       throw ApiException(response.statusCode, await _decodeBodyBytes(response));
     }
@@ -286,7 +302,7 @@ class SearchApi {
   /// Parameters:
   ///
   /// * [MetadataSearchDto] metadataSearchDto (required):
-  Future<Response> searchAssetsWithHttpInfo(MetadataSearchDto metadataSearchDto,) async {
+  Future<Response> searchAssetsWithHttpInfo(MetadataSearchDto metadataSearchDto, { Future<void>? abortTrigger, }) async {
     // ignore: prefer_const_declarations
     final apiPath = r'/search/metadata';
 
@@ -308,6 +324,7 @@ class SearchApi {
       headerParams,
       formParams,
       contentTypes.isEmpty ? null : contentTypes.first,
+      abortTrigger: abortTrigger,
     );
   }
 
@@ -318,8 +335,8 @@ class SearchApi {
   /// Parameters:
   ///
   /// * [MetadataSearchDto] metadataSearchDto (required):
-  Future<SearchResponseDto?> searchAssets(MetadataSearchDto metadataSearchDto,) async {
-    final response = await searchAssetsWithHttpInfo(metadataSearchDto,);
+  Future<SearchResponseDto?> searchAssets(MetadataSearchDto metadataSearchDto, { Future<void>? abortTrigger, }) async {
+    final response = await searchAssetsWithHttpInfo(metadataSearchDto, abortTrigger: abortTrigger,);
     if (response.statusCode >= HttpStatus.badRequest) {
       throw ApiException(response.statusCode, await _decodeBodyBytes(response));
     }
@@ -342,69 +359,96 @@ class SearchApi {
   /// Parameters:
   ///
   /// * [List<String>] albumIds:
+  ///   Filter by album IDs
   ///
   /// * [String] city:
+  ///   Filter by city name
   ///
   /// * [String] country:
+  ///   Filter by country name
   ///
   /// * [DateTime] createdAfter:
+  ///   Filter by creation date (after)
   ///
   /// * [DateTime] createdBefore:
-  ///
-  /// * [String] deviceId:
+  ///   Filter by creation date (before)
   ///
   /// * [bool] isEncoded:
+  ///   Filter by encoded status
   ///
   /// * [bool] isFavorite:
+  ///   Filter by favorite status
   ///
   /// * [bool] isMotion:
+  ///   Filter by motion photo status
   ///
   /// * [bool] isNotInAlbum:
+  ///   Filter assets not in any album
   ///
   /// * [bool] isOffline:
+  ///   Filter by offline status
   ///
   /// * [String] lensModel:
+  ///   Filter by lens model
   ///
   /// * [String] libraryId:
+  ///   Library ID to filter by
   ///
   /// * [String] make:
+  ///   Filter by camera make
   ///
   /// * [int] minFileSize:
+  ///   Minimum file size in bytes
   ///
   /// * [String] model:
+  ///   Filter by camera model
   ///
   /// * [String] ocr:
+  ///   Filter by OCR text content
   ///
   /// * [List<String>] personIds:
+  ///   Filter by person IDs
   ///
-  /// * [num] rating:
+  /// * [int] rating:
+  ///   Filter by rating [1-5], or null for unrated
   ///
-  /// * [num] size:
+  /// * [int] size:
+  ///   Number of results to return
   ///
   /// * [String] state:
+  ///   Filter by state/province name
   ///
   /// * [List<String>] tagIds:
+  ///   Filter by tag IDs
   ///
   /// * [DateTime] takenAfter:
+  ///   Filter by taken date (after)
   ///
   /// * [DateTime] takenBefore:
+  ///   Filter by taken date (before)
   ///
   /// * [DateTime] trashedAfter:
+  ///   Filter by trash date (after)
   ///
   /// * [DateTime] trashedBefore:
+  ///   Filter by trash date (before)
   ///
   /// * [AssetTypeEnum] type:
   ///
   /// * [DateTime] updatedAfter:
+  ///   Filter by update date (after)
   ///
   /// * [DateTime] updatedBefore:
+  ///   Filter by update date (before)
   ///
   /// * [AssetVisibility] visibility:
   ///
   /// * [bool] withDeleted:
+  ///   Include deleted assets
   ///
   /// * [bool] withExif:
-  Future<Response> searchLargeAssetsWithHttpInfo({ List<String>? albumIds, String? city, String? country, DateTime? createdAfter, DateTime? createdBefore, String? deviceId, bool? isEncoded, bool? isFavorite, bool? isMotion, bool? isNotInAlbum, bool? isOffline, String? lensModel, String? libraryId, String? make, int? minFileSize, String? model, String? ocr, List<String>? personIds, num? rating, num? size, String? state, List<String>? tagIds, DateTime? takenAfter, DateTime? takenBefore, DateTime? trashedAfter, DateTime? trashedBefore, AssetTypeEnum? type, DateTime? updatedAfter, DateTime? updatedBefore, AssetVisibility? visibility, bool? withDeleted, bool? withExif, }) async {
+  ///   Include EXIF data in response
+  Future<Response> searchLargeAssetsWithHttpInfo({ List<String>? albumIds, String? city, String? country, DateTime? createdAfter, DateTime? createdBefore, bool? isEncoded, bool? isFavorite, bool? isMotion, bool? isNotInAlbum, bool? isOffline, String? lensModel, String? libraryId, String? make, int? minFileSize, String? model, String? ocr, List<String>? personIds, int? rating, int? size, String? state, List<String>? tagIds, DateTime? takenAfter, DateTime? takenBefore, DateTime? trashedAfter, DateTime? trashedBefore, AssetTypeEnum? type, DateTime? updatedAfter, DateTime? updatedBefore, AssetVisibility? visibility, bool? withDeleted, bool? withExif, Future<void>? abortTrigger, }) async {
     // ignore: prefer_const_declarations
     final apiPath = r'/search/large-assets';
 
@@ -429,9 +473,6 @@ class SearchApi {
     }
     if (createdBefore != null) {
       queryParams.addAll(_queryParams('', 'createdBefore', createdBefore));
-    }
-    if (deviceId != null) {
-      queryParams.addAll(_queryParams('', 'deviceId', deviceId));
     }
     if (isEncoded != null) {
       queryParams.addAll(_queryParams('', 'isEncoded', isEncoded));
@@ -523,6 +564,7 @@ class SearchApi {
       headerParams,
       formParams,
       contentTypes.isEmpty ? null : contentTypes.first,
+      abortTrigger: abortTrigger,
     );
   }
 
@@ -533,70 +575,97 @@ class SearchApi {
   /// Parameters:
   ///
   /// * [List<String>] albumIds:
+  ///   Filter by album IDs
   ///
   /// * [String] city:
+  ///   Filter by city name
   ///
   /// * [String] country:
+  ///   Filter by country name
   ///
   /// * [DateTime] createdAfter:
+  ///   Filter by creation date (after)
   ///
   /// * [DateTime] createdBefore:
-  ///
-  /// * [String] deviceId:
+  ///   Filter by creation date (before)
   ///
   /// * [bool] isEncoded:
+  ///   Filter by encoded status
   ///
   /// * [bool] isFavorite:
+  ///   Filter by favorite status
   ///
   /// * [bool] isMotion:
+  ///   Filter by motion photo status
   ///
   /// * [bool] isNotInAlbum:
+  ///   Filter assets not in any album
   ///
   /// * [bool] isOffline:
+  ///   Filter by offline status
   ///
   /// * [String] lensModel:
+  ///   Filter by lens model
   ///
   /// * [String] libraryId:
+  ///   Library ID to filter by
   ///
   /// * [String] make:
+  ///   Filter by camera make
   ///
   /// * [int] minFileSize:
+  ///   Minimum file size in bytes
   ///
   /// * [String] model:
+  ///   Filter by camera model
   ///
   /// * [String] ocr:
+  ///   Filter by OCR text content
   ///
   /// * [List<String>] personIds:
+  ///   Filter by person IDs
   ///
-  /// * [num] rating:
+  /// * [int] rating:
+  ///   Filter by rating [1-5], or null for unrated
   ///
-  /// * [num] size:
+  /// * [int] size:
+  ///   Number of results to return
   ///
   /// * [String] state:
+  ///   Filter by state/province name
   ///
   /// * [List<String>] tagIds:
+  ///   Filter by tag IDs
   ///
   /// * [DateTime] takenAfter:
+  ///   Filter by taken date (after)
   ///
   /// * [DateTime] takenBefore:
+  ///   Filter by taken date (before)
   ///
   /// * [DateTime] trashedAfter:
+  ///   Filter by trash date (after)
   ///
   /// * [DateTime] trashedBefore:
+  ///   Filter by trash date (before)
   ///
   /// * [AssetTypeEnum] type:
   ///
   /// * [DateTime] updatedAfter:
+  ///   Filter by update date (after)
   ///
   /// * [DateTime] updatedBefore:
+  ///   Filter by update date (before)
   ///
   /// * [AssetVisibility] visibility:
   ///
   /// * [bool] withDeleted:
+  ///   Include deleted assets
   ///
   /// * [bool] withExif:
-  Future<List<AssetResponseDto>?> searchLargeAssets({ List<String>? albumIds, String? city, String? country, DateTime? createdAfter, DateTime? createdBefore, String? deviceId, bool? isEncoded, bool? isFavorite, bool? isMotion, bool? isNotInAlbum, bool? isOffline, String? lensModel, String? libraryId, String? make, int? minFileSize, String? model, String? ocr, List<String>? personIds, num? rating, num? size, String? state, List<String>? tagIds, DateTime? takenAfter, DateTime? takenBefore, DateTime? trashedAfter, DateTime? trashedBefore, AssetTypeEnum? type, DateTime? updatedAfter, DateTime? updatedBefore, AssetVisibility? visibility, bool? withDeleted, bool? withExif, }) async {
-    final response = await searchLargeAssetsWithHttpInfo( albumIds: albumIds, city: city, country: country, createdAfter: createdAfter, createdBefore: createdBefore, deviceId: deviceId, isEncoded: isEncoded, isFavorite: isFavorite, isMotion: isMotion, isNotInAlbum: isNotInAlbum, isOffline: isOffline, lensModel: lensModel, libraryId: libraryId, make: make, minFileSize: minFileSize, model: model, ocr: ocr, personIds: personIds, rating: rating, size: size, state: state, tagIds: tagIds, takenAfter: takenAfter, takenBefore: takenBefore, trashedAfter: trashedAfter, trashedBefore: trashedBefore, type: type, updatedAfter: updatedAfter, updatedBefore: updatedBefore, visibility: visibility, withDeleted: withDeleted, withExif: withExif, );
+  ///   Include EXIF data in response
+  Future<List<AssetResponseDto>?> searchLargeAssets({ List<String>? albumIds, String? city, String? country, DateTime? createdAfter, DateTime? createdBefore, bool? isEncoded, bool? isFavorite, bool? isMotion, bool? isNotInAlbum, bool? isOffline, String? lensModel, String? libraryId, String? make, int? minFileSize, String? model, String? ocr, List<String>? personIds, int? rating, int? size, String? state, List<String>? tagIds, DateTime? takenAfter, DateTime? takenBefore, DateTime? trashedAfter, DateTime? trashedBefore, AssetTypeEnum? type, DateTime? updatedAfter, DateTime? updatedBefore, AssetVisibility? visibility, bool? withDeleted, bool? withExif, Future<void>? abortTrigger, }) async {
+    final response = await searchLargeAssetsWithHttpInfo(albumIds: albumIds, city: city, country: country, createdAfter: createdAfter, createdBefore: createdBefore, isEncoded: isEncoded, isFavorite: isFavorite, isMotion: isMotion, isNotInAlbum: isNotInAlbum, isOffline: isOffline, lensModel: lensModel, libraryId: libraryId, make: make, minFileSize: minFileSize, model: model, ocr: ocr, personIds: personIds, rating: rating, size: size, state: state, tagIds: tagIds, takenAfter: takenAfter, takenBefore: takenBefore, trashedAfter: trashedAfter, trashedBefore: trashedBefore, type: type, updatedAfter: updatedAfter, updatedBefore: updatedBefore, visibility: visibility, withDeleted: withDeleted, withExif: withExif, abortTrigger: abortTrigger,);
     if (response.statusCode >= HttpStatus.badRequest) {
       throw ApiException(response.statusCode, await _decodeBodyBytes(response));
     }
@@ -622,9 +691,11 @@ class SearchApi {
   /// Parameters:
   ///
   /// * [String] name (required):
+  ///   Person name to search for
   ///
   /// * [bool] withHidden:
-  Future<Response> searchPersonWithHttpInfo(String name, { bool? withHidden, }) async {
+  ///   Include hidden people
+  Future<Response> searchPersonWithHttpInfo(String name, { bool? withHidden, Future<void>? abortTrigger, }) async {
     // ignore: prefer_const_declarations
     final apiPath = r'/search/person';
 
@@ -651,6 +722,7 @@ class SearchApi {
       headerParams,
       formParams,
       contentTypes.isEmpty ? null : contentTypes.first,
+      abortTrigger: abortTrigger,
     );
   }
 
@@ -661,10 +733,12 @@ class SearchApi {
   /// Parameters:
   ///
   /// * [String] name (required):
+  ///   Person name to search for
   ///
   /// * [bool] withHidden:
-  Future<List<PersonResponseDto>?> searchPerson(String name, { bool? withHidden, }) async {
-    final response = await searchPersonWithHttpInfo(name,  withHidden: withHidden, );
+  ///   Include hidden people
+  Future<List<PersonResponseDto>?> searchPerson(String name, { bool? withHidden, Future<void>? abortTrigger, }) async {
+    final response = await searchPersonWithHttpInfo(name, withHidden: withHidden, abortTrigger: abortTrigger,);
     if (response.statusCode >= HttpStatus.badRequest) {
       throw ApiException(response.statusCode, await _decodeBodyBytes(response));
     }
@@ -690,7 +764,8 @@ class SearchApi {
   /// Parameters:
   ///
   /// * [String] name (required):
-  Future<Response> searchPlacesWithHttpInfo(String name,) async {
+  ///   Place name to search for
+  Future<Response> searchPlacesWithHttpInfo(String name, { Future<void>? abortTrigger, }) async {
     // ignore: prefer_const_declarations
     final apiPath = r'/search/places';
 
@@ -714,6 +789,7 @@ class SearchApi {
       headerParams,
       formParams,
       contentTypes.isEmpty ? null : contentTypes.first,
+      abortTrigger: abortTrigger,
     );
   }
 
@@ -724,8 +800,9 @@ class SearchApi {
   /// Parameters:
   ///
   /// * [String] name (required):
-  Future<List<PlacesResponseDto>?> searchPlaces(String name,) async {
-    final response = await searchPlacesWithHttpInfo(name,);
+  ///   Place name to search for
+  Future<List<PlacesResponseDto>?> searchPlaces(String name, { Future<void>? abortTrigger, }) async {
+    final response = await searchPlacesWithHttpInfo(name, abortTrigger: abortTrigger,);
     if (response.statusCode >= HttpStatus.badRequest) {
       throw ApiException(response.statusCode, await _decodeBodyBytes(response));
     }
@@ -751,7 +828,7 @@ class SearchApi {
   /// Parameters:
   ///
   /// * [RandomSearchDto] randomSearchDto (required):
-  Future<Response> searchRandomWithHttpInfo(RandomSearchDto randomSearchDto,) async {
+  Future<Response> searchRandomWithHttpInfo(RandomSearchDto randomSearchDto, { Future<void>? abortTrigger, }) async {
     // ignore: prefer_const_declarations
     final apiPath = r'/search/random';
 
@@ -773,6 +850,7 @@ class SearchApi {
       headerParams,
       formParams,
       contentTypes.isEmpty ? null : contentTypes.first,
+      abortTrigger: abortTrigger,
     );
   }
 
@@ -783,8 +861,8 @@ class SearchApi {
   /// Parameters:
   ///
   /// * [RandomSearchDto] randomSearchDto (required):
-  Future<List<AssetResponseDto>?> searchRandom(RandomSearchDto randomSearchDto,) async {
-    final response = await searchRandomWithHttpInfo(randomSearchDto,);
+  Future<List<AssetResponseDto>?> searchRandom(RandomSearchDto randomSearchDto, { Future<void>? abortTrigger, }) async {
+    final response = await searchRandomWithHttpInfo(randomSearchDto, abortTrigger: abortTrigger,);
     if (response.statusCode >= HttpStatus.badRequest) {
       throw ApiException(response.statusCode, await _decodeBodyBytes(response));
     }
@@ -810,7 +888,7 @@ class SearchApi {
   /// Parameters:
   ///
   /// * [SmartSearchDto] smartSearchDto (required):
-  Future<Response> searchSmartWithHttpInfo(SmartSearchDto smartSearchDto,) async {
+  Future<Response> searchSmartWithHttpInfo(SmartSearchDto smartSearchDto, { Future<void>? abortTrigger, }) async {
     // ignore: prefer_const_declarations
     final apiPath = r'/search/smart';
 
@@ -832,6 +910,7 @@ class SearchApi {
       headerParams,
       formParams,
       contentTypes.isEmpty ? null : contentTypes.first,
+      abortTrigger: abortTrigger,
     );
   }
 
@@ -842,8 +921,8 @@ class SearchApi {
   /// Parameters:
   ///
   /// * [SmartSearchDto] smartSearchDto (required):
-  Future<SearchResponseDto?> searchSmart(SmartSearchDto smartSearchDto,) async {
-    final response = await searchSmartWithHttpInfo(smartSearchDto,);
+  Future<SearchResponseDto?> searchSmart(SmartSearchDto smartSearchDto, { Future<void>? abortTrigger, }) async {
+    final response = await searchSmartWithHttpInfo(smartSearchDto, abortTrigger: abortTrigger,);
     if (response.statusCode >= HttpStatus.badRequest) {
       throw ApiException(response.statusCode, await _decodeBodyBytes(response));
     }

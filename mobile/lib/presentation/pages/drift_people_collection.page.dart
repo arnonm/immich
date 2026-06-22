@@ -3,9 +3,10 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
+import 'package:immich_mobile/extensions/string_extensions.dart';
 import 'package:immich_mobile/providers/infrastructure/people.provider.dart';
+import 'package:immich_mobile/presentation/widgets/images/remote_image_provider.dart';
 import 'package:immich_mobile/routing/router.dart';
-import 'package:immich_mobile/services/api.service.dart';
 import 'package:immich_mobile/utils/image_url_builder.dart';
 import 'package:immich_mobile/utils/people.utils.dart';
 import 'package:immich_mobile/widgets/common/search_field.dart';
@@ -31,7 +32,6 @@ class _DriftPeopleCollectionPageState extends ConsumerState<DriftPeopleCollectio
   @override
   Widget build(BuildContext context) {
     final people = ref.watch(driftGetAllPeopleProvider);
-    final headers = ApiService.getRequestHeaders();
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -65,7 +65,9 @@ class _DriftPeopleCollectionPageState extends ConsumerState<DriftPeopleCollectio
               data: (people) {
                 if (_search != null) {
                   people = people.where((person) {
-                    return person.name.toLowerCase().contains(_search!.toLowerCase());
+                    return person.name.toLowerCase().removeDiacritics().contains(
+                      _search!.toLowerCase().removeDiacritics(),
+                    );
                   }).toList();
                 }
                 return GridView.builder(
@@ -80,6 +82,7 @@ class _DriftPeopleCollectionPageState extends ConsumerState<DriftPeopleCollectio
                     final person = people[index];
 
                     return Column(
+                      key: ValueKey(person.id),
                       children: [
                         GestureDetector(
                           onTap: () {
@@ -89,8 +92,9 @@ class _DriftPeopleCollectionPageState extends ConsumerState<DriftPeopleCollectio
                             shape: const CircleBorder(side: BorderSide.none),
                             elevation: 3,
                             child: CircleAvatar(
+                              key: ValueKey(person.id),
                               maxRadius: isTablet ? 100 / 2 : 96 / 2,
-                              backgroundImage: NetworkImage(getFaceThumbnailUrl(person.id), headers: headers),
+                              backgroundImage: RemoteImageProvider(url: getFaceThumbnailUrl(person.id)),
                             ),
                           ),
                         ),

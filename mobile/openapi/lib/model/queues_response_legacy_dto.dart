@@ -16,8 +16,10 @@ class QueuesResponseLegacyDto {
     required this.backgroundTask,
     required this.backupDatabase,
     required this.duplicateDetection,
+    required this.editor,
     required this.faceDetection,
     required this.facialRecognition,
+    required this.integrityCheck,
     required this.library_,
     required this.metadataExtraction,
     required this.migration,
@@ -38,9 +40,13 @@ class QueuesResponseLegacyDto {
 
   QueueResponseLegacyDto duplicateDetection;
 
+  QueueResponseLegacyDto editor;
+
   QueueResponseLegacyDto faceDetection;
 
   QueueResponseLegacyDto facialRecognition;
+
+  QueueResponseLegacyDto integrityCheck;
 
   QueueResponseLegacyDto library_;
 
@@ -71,8 +77,10 @@ class QueuesResponseLegacyDto {
     other.backgroundTask == backgroundTask &&
     other.backupDatabase == backupDatabase &&
     other.duplicateDetection == duplicateDetection &&
+    other.editor == editor &&
     other.faceDetection == faceDetection &&
     other.facialRecognition == facialRecognition &&
+    other.integrityCheck == integrityCheck &&
     other.library_ == library_ &&
     other.metadataExtraction == metadataExtraction &&
     other.migration == migration &&
@@ -92,8 +100,10 @@ class QueuesResponseLegacyDto {
     (backgroundTask.hashCode) +
     (backupDatabase.hashCode) +
     (duplicateDetection.hashCode) +
+    (editor.hashCode) +
     (faceDetection.hashCode) +
     (facialRecognition.hashCode) +
+    (integrityCheck.hashCode) +
     (library_.hashCode) +
     (metadataExtraction.hashCode) +
     (migration.hashCode) +
@@ -108,15 +118,17 @@ class QueuesResponseLegacyDto {
     (workflow.hashCode);
 
   @override
-  String toString() => 'QueuesResponseLegacyDto[backgroundTask=$backgroundTask, backupDatabase=$backupDatabase, duplicateDetection=$duplicateDetection, faceDetection=$faceDetection, facialRecognition=$facialRecognition, library_=$library_, metadataExtraction=$metadataExtraction, migration=$migration, notifications=$notifications, ocr=$ocr, search=$search, sidecar=$sidecar, smartSearch=$smartSearch, storageTemplateMigration=$storageTemplateMigration, thumbnailGeneration=$thumbnailGeneration, videoConversion=$videoConversion, workflow=$workflow]';
+  String toString() => 'QueuesResponseLegacyDto[backgroundTask=$backgroundTask, backupDatabase=$backupDatabase, duplicateDetection=$duplicateDetection, editor=$editor, faceDetection=$faceDetection, facialRecognition=$facialRecognition, integrityCheck=$integrityCheck, library_=$library_, metadataExtraction=$metadataExtraction, migration=$migration, notifications=$notifications, ocr=$ocr, search=$search, sidecar=$sidecar, smartSearch=$smartSearch, storageTemplateMigration=$storageTemplateMigration, thumbnailGeneration=$thumbnailGeneration, videoConversion=$videoConversion, workflow=$workflow]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
       json[r'backgroundTask'] = this.backgroundTask;
       json[r'backupDatabase'] = this.backupDatabase;
       json[r'duplicateDetection'] = this.duplicateDetection;
+      json[r'editor'] = this.editor;
       json[r'faceDetection'] = this.faceDetection;
       json[r'facialRecognition'] = this.facialRecognition;
+      json[r'integrityCheck'] = this.integrityCheck;
       json[r'library'] = this.library_;
       json[r'metadataExtraction'] = this.metadataExtraction;
       json[r'migration'] = this.migration;
@@ -144,8 +156,10 @@ class QueuesResponseLegacyDto {
         backgroundTask: QueueResponseLegacyDto.fromJson(json[r'backgroundTask'])!,
         backupDatabase: QueueResponseLegacyDto.fromJson(json[r'backupDatabase'])!,
         duplicateDetection: QueueResponseLegacyDto.fromJson(json[r'duplicateDetection'])!,
+        editor: QueueResponseLegacyDto.fromJson(json[r'editor'])!,
         faceDetection: QueueResponseLegacyDto.fromJson(json[r'faceDetection'])!,
         facialRecognition: QueueResponseLegacyDto.fromJson(json[r'facialRecognition'])!,
+        integrityCheck: QueueResponseLegacyDto.fromJson(json[r'integrityCheck'])!,
         library_: QueueResponseLegacyDto.fromJson(json[r'library'])!,
         metadataExtraction: QueueResponseLegacyDto.fromJson(json[r'metadataExtraction'])!,
         migration: QueueResponseLegacyDto.fromJson(json[r'migration'])!,
@@ -208,8 +222,10 @@ class QueuesResponseLegacyDto {
     'backgroundTask',
     'backupDatabase',
     'duplicateDetection',
+    'editor',
     'faceDetection',
     'facialRecognition',
+    'integrityCheck',
     'library',
     'metadataExtraction',
     'migration',

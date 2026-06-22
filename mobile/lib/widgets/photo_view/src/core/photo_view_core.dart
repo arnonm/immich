@@ -36,6 +36,7 @@ class PhotoViewCore extends StatefulWidget {
     required this.onDragStart,
     required this.onDragEnd,
     required this.onDragUpdate,
+    required this.onDragCancel,
     required this.onScaleEnd,
     required this.onLongPressStart,
     required this.gestureDetectorBehavior,
@@ -62,6 +63,7 @@ class PhotoViewCore extends StatefulWidget {
     this.onDragStart,
     this.onDragEnd,
     this.onDragUpdate,
+    this.onDragCancel,
     this.onScaleEnd,
     this.onLongPressStart,
     this.gestureDetectorBehavior,
@@ -100,6 +102,7 @@ class PhotoViewCore extends StatefulWidget {
   final PhotoViewImageDragStartCallback? onDragStart;
   final PhotoViewImageDragEndCallback? onDragEnd;
   final PhotoViewImageDragUpdateCallback? onDragUpdate;
+  final VoidCallback? onDragCancel;
 
   final PhotoViewImageLongPressStartCallback? onLongPressStart;
 
@@ -135,8 +138,6 @@ class PhotoViewCoreState extends State<PhotoViewCore>
   Animation<double>? _rotationAnimation;
 
   PhotoViewHeroAttributes? get heroAttributes => widget.heroAttributes;
-
-  late ScaleBoundaries cachedScaleBoundaries = widget.scaleBoundaries;
 
   void handleScaleAnimation() {
     scale = _scaleAnimation!.value;
@@ -300,7 +301,7 @@ class PhotoViewCoreState extends State<PhotoViewCore>
     controller.scaleAnimationBuilder(_animateControllerScale);
     controller.rotationAnimationBuilder(_animateControllerRotation);
 
-    cachedScaleBoundaries = widget.scaleBoundaries;
+    _updateScaleBoundaries();
 
     _scaleAnimationController = AnimationController(vsync: this)
       ..addListener(handleScaleAnimation)
@@ -331,14 +332,29 @@ class PhotoViewCoreState extends State<PhotoViewCore>
     widget.onTapDown?.call(context, details, controller.value);
   }
 
-  @override
-  Widget build(BuildContext context) {
-    // Check if we need a recalc on the scale
-    if (widget.scaleBoundaries != cachedScaleBoundaries) {
-      markNeedsScaleRecalc = true;
-      cachedScaleBoundaries = widget.scaleBoundaries;
+  void _updateScaleBoundaries() {
+    final prev = controller.scaleBoundaries;
+    if (prev == widget.scaleBoundaries) {
+      return;
     }
 
+    if (prev != null && controller.scale != null && prev.initialScale > 0) {
+      final ratio = widget.scaleBoundaries.initialScale / prev.initialScale;
+      controller.setScaleInvisibly(controller.scale! * ratio);
+    } else {
+      markNeedsScaleRecalc = true;
+    }
+    controller.scaleBoundaries = widget.scaleBoundaries;
+  }
+
+  @override
+  void didUpdateWidget(PhotoViewCore oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _updateScaleBoundaries();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return StreamBuilder(
       stream: controller.outputStateStream,
       initialData: controller.prevValue,
@@ -386,6 +402,7 @@ class PhotoViewCoreState extends State<PhotoViewCore>
             onDragUpdate: widget.onDragUpdate != null
                 ? (details) => widget.onDragUpdate!(context, details, widget.controller.value)
                 : null,
+            onDragCancel: widget.onDragCancel,
             hitDetector: this,
             onTapUp: widget.onTapUp != null ? (details) => widget.onTapUp!(context, details, value) : null,
             onTapDown: widget.onTapDown != null ? (details) => widget.onTapDown!(context, details, value) : null,
@@ -416,7 +433,11 @@ class PhotoViewCoreState extends State<PhotoViewCore>
 
   Widget _buildChild() {
     return widget.hasCustomChild
-        ? widget.customChild!
+        ? SizedBox(
+            width: scaleBoundaries.childSize.width * scale,
+            height: scaleBoundaries.childSize.height * scale,
+            child: widget.customChild!,
+          )
         : Image(
             key: widget.heroAttributes?.tag != null ? ObjectKey(widget.heroAttributes!.tag) : null,
             image: widget.imageProvider!,
@@ -424,7 +445,7 @@ class PhotoViewCoreState extends State<PhotoViewCore>
             gaplessPlayback: widget.gaplessPlayback ?? false,
             filterQuality: widget.filterQuality,
             width: scaleBoundaries.childSize.width * scale,
-            fit: BoxFit.cover,
+            fit: BoxFit.contain,
             isAntiAlias: widget.filterQuality == FilterQuality.high,
           );
   }

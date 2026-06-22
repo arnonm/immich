@@ -104,7 +104,9 @@ class ScrubberState extends ConsumerState<Scrubber> with TickerProviderStateMixi
   late ScrollController _scrollController;
 
   double get _currentOffset {
-    if (_scrollController.hasClients != true) return 0.0;
+    if (_scrollController.hasClients != true) {
+      return 0.0;
+    }
 
     return _scrollController.offset * _scrubberHeight / _scrollController.position.maxScrollExtent;
   }
@@ -216,6 +218,10 @@ class ScrubberState extends ConsumerState<Scrubber> with TickerProviderStateMixi
 
   void _onDragUpdate(DragUpdateDetails details) {
     if (!_isDragging) {
+      return;
+    }
+
+    if (_scrubberHeight <= 0) {
       return;
     }
 
@@ -450,7 +456,7 @@ class _SegmentWidget extends StatelessWidget {
             alignment: Alignment.center,
             child: Text(
               _segment.date.year.toString(),
-              style: context.textTheme.labelMedium?.copyWith(fontFamily: "OverpassMono", fontWeight: FontWeight.w600),
+              style: context.textTheme.labelMedium?.copyWith(fontFamily: "GoogleSansCode", fontWeight: FontWeight.w600),
             ),
           ),
         ),
@@ -530,12 +536,14 @@ class _CircularThumb extends StatelessWidget {
         elevation: 4.0,
         color: backgroundColor,
         borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(48.0),
-          bottomLeft: Radius.circular(48.0),
+          topLeft: Radius.circular(kScrubberThumbHeight),
+          bottomLeft: Radius.circular(kScrubberThumbHeight),
           topRight: Radius.circular(4.0),
           bottomRight: Radius.circular(4.0),
         ),
-        child: Container(constraints: BoxConstraints.tight(const Size(48.0 * 0.6, 48.0))),
+        child: Container(
+          constraints: BoxConstraints.tight(const Size(kScrubberThumbHeight * 0.6, kScrubberThumbHeight)),
+        ),
       ),
     );
   }
@@ -574,9 +582,7 @@ class _SlideFadeTransition extends StatelessWidget {
   final Animation<double> _animation;
   final Widget _child;
 
-  const _SlideFadeTransition({required Animation<double> animation, required Widget child})
-    : _animation = animation,
-      _child = child;
+  const _SlideFadeTransition({required this._animation, required this._child});
 
   @override
   Widget build(BuildContext context) {

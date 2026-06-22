@@ -98,7 +98,6 @@ entryPoints:
       respondingTimeouts:
         readTimeout: 600s
         idleTimeout: 600s
-        writeTimeout: 600s
 ```
 
 The second part is in the `docker-compose.yml` file where immich is in. Add the Traefik specific labels like in the example.
@@ -113,7 +112,7 @@ services:
       traefik.enable: true
       # increase readingTimeouts for the entrypoint used here
       traefik.http.routers.immich.entrypoints: websecure
-      traefik.http.routers.immich.rule: Host(`immich.your-domain.com`)
+      traefik.http.routers.immich.rule: Host(`immich.example.com`)
       traefik.http.services.immich.loadbalancer.server.port: 2283
 ```
 

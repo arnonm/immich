@@ -1,11 +1,12 @@
-import { AppRoute } from '$lib/constants';
-import { authenticate } from '$lib/utils/auth';
-import { getFormatter } from '$lib/utils/i18n';
 import { getLibrary, getLibraryStatistics, type LibraryResponseDto } from '@immich/sdk';
 import { redirect } from '@sveltejs/kit';
+import { Route } from '$lib/route';
+import { authenticate } from '$lib/utils/auth';
+import { getFormatter } from '$lib/utils/i18n';
 import type { LayoutLoad } from './$types';
 
-export const load = (async ({ params: { id }, url }) => {
+export const load = (async ({ params: { id }, url, depends }) => {
+  depends('app:library');
   await authenticate(url, { admin: true });
 
   let library: LibraryResponseDto;
@@ -13,15 +14,15 @@ export const load = (async ({ params: { id }, url }) => {
   try {
     library = await getLibrary({ id });
   } catch {
-    redirect(302, AppRoute.ADMIN_LIBRARIES);
+    redirect(307, Route.libraries());
   }
 
-  const statistics = await getLibraryStatistics({ id });
+  const statisticsPromise = getLibraryStatistics({ id });
   const $t = await getFormatter();
 
   return {
     library,
-    statistics,
+    statisticsPromise,
     meta: {
       title: $t('admin.library_details'),
     },

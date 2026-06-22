@@ -1,14 +1,26 @@
 <script lang="ts">
-  import { goto } from '$app/navigation';
+  import { goto, invalidate } from '$app/navigation';
   import AdminPageLayout from '$lib/components/layouts/AdminPageLayout.svelte';
   import OnEvents from '$lib/components/OnEvents.svelte';
-  import EmptyPlaceholder from '$lib/components/shared-components/empty-placeholder.svelte';
-  import { AppRoute } from '$lib/constants';
-  import { getLibrariesActions, handleViewLibrary } from '$lib/services/library.service';
+  import EmptyPlaceholder from '$lib/components/shared-components/EmptyPlaceholder.svelte';
+  import { Route } from '$lib/route';
+  import { getLibrariesActions, getLibraryActions } from '$lib/services/library.service';
   import { locale } from '$lib/stores/preferences.store';
   import { getBytesWithUnit } from '$lib/utils/byte-units';
-  import { getLibrary, getLibraryStatistics, type LibraryResponseDto } from '@immich/sdk';
-  import { Button, CommandPaletteContext } from '@immich/ui';
+  import { type LibraryResponseDto } from '@immich/sdk';
+  import {
+    CommandPaletteDefaultProvider,
+    Container,
+    ContextMenuButton,
+    Link,
+    MenuItemType,
+    Table,
+    TableBody,
+    TableCell,
+    TableHeader,
+    TableHeading,
+    TableRow,
+  } from '@immich/ui';
   import type { Snippet } from 'svelte';
   import { t } from 'svelte-i18n';
   import { fade } from 'svelte/transition';
@@ -21,93 +33,145 @@
 
   let { children, data }: Props = $props();
 
-  let libraries = $state(data.libraries);
-  let statistics = $state(data.statistics);
-  let owners = $state(data.owners);
+  let libraries = $derived([...data.libraries]);
+  let owners = $derived({ ...data.owners });
 
   const onLibraryCreate = async (library: LibraryResponseDto) => {
-    await goto(`${AppRoute.ADMIN_LIBRARIES}/${library.id}`);
+    await goto(Route.viewLibrary(library));
   };
 
-  const onLibraryUpdate = async (library: LibraryResponseDto) => {
-    const index = libraries.findIndex(({ id }) => id === library.id);
+  const onLibraryUpdate = () => invalidate('app:libraries');
+  const onLibraryDelete = () => invalidate('app:libraries');
 
-    if (index === -1) {
-      return;
-    }
+  const { Create, ScanAll } = $derived(getLibrariesActions($t));
 
-    libraries[index] = await getLibrary({ id: library.id });
-    statistics[library.id] = await getLibraryStatistics({ id: library.id });
+  const getActionsForLibrary = (library: LibraryResponseDto) => {
+    const { Detail, Scan, Edit, Delete } = getLibraryActions($t, library);
+    return [Detail, Scan, Edit, MenuItemType.Divider, Delete];
   };
 
-  const onLibraryDelete = ({ id }: { id: string }) => {
-    libraries = libraries.filter((library) => library.id !== id);
-    delete statistics[id];
-    delete owners[id];
+  const classes = {
+    column1: 'w-4/12',
+    column2: 'w-4/12',
+    column3: 'w-1/12',
+    column4: 'w-1/12',
+    column5: 'w-1/12',
+    column6: 'w-1/12 flex justify-end',
   };
-
-  const { Create, ScanAll } = $derived(getLibrariesActions($t, libraries));
 </script>
 
 <OnEvents {onLibraryCreate} {onLibraryUpdate} {onLibraryDelete} />
 
-<CommandPaletteContext commands={[Create, ScanAll]} />
+<CommandPaletteDefaultProvider name={$t('library')} actions={[Create, ScanAll]} />
 
 <AdminPageLayout breadcrumbs={[{ title: data.meta.title }]} actions={[ScanAll, Create]}>
-  <section class="my-4">
+  <Container size="large" center class="my-4">
     <div class="flex flex-col items-center gap-2" in:fade={{ duration: 500 }}>
       {#if libraries.length > 0}
-        <table class="text-start">
-          <thead
-            class="mb-4 flex h-12 w-full rounded-md border bg-gray-50 text-primary dark:border-immich-dark-gray dark:bg-immich-dark-gray"
-          >
-            <tr class="grid grid-cols-6 w-full place-items-center">
-              <th class="text-center text-sm font-medium">{$t('name')}</th>
-              <th class="text-center text-sm font-medium">{$t('owner')}</th>
-              <th class="text-center text-sm font-medium">{$t('photos')}</th>
-              <th class="text-center text-sm font-medium">{$t('videos')}</th>
-              <th class="text-center text-sm font-medium">{$t('size')}</th>
-              <th class="text-center text-sm font-medium"></th>
-            </tr>
-          </thead>
-          <tbody class="block overflow-y-auto rounded-md border dark:border-immich-dark-gray">
+        <Table striped size="small" spacing="small">
+          <TableHeader>
+            <TableHeading class={classes.column1}>{$t('name')}</TableHeading>
+            <TableHeading class={classes.column2}>{$t('owner')}</TableHeading>
+            <TableHeading class={classes.column3}>{$t('photos')}</TableHeading>
+            <TableHeading class={classes.column4}>{$t('videos')}</TableHeading>
+            <TableHeading class={classes.column5}>{$t('size')}</TableHeading>
+            <TableHeading class={classes.column6}></TableHeading>
+          </TableHeader>
+          <TableBody>
             {#each libraries as library (library.id + library.name)}
-              {@const { photos, usage, videos } = statistics[library.id]}
-              {@const [diskUsage, diskUsageUnit] = getBytesWithUnit(usage, 0)}
-              <tr
-                class="grid grid-cols-6 h-20 w-full place-items-center text-center dark:text-immich-dark-fg even:bg-subtle/20 odd:bg-subtle/80"
-              >
-                <td class="text-ellipsis px-4 text-sm">{library.name}</td>
-                <td class="text-ellipsis px-4 text-sm">
-                  {owners[library.id].name}
-                </td>
-                <td class="text-ellipsis px-4 text-sm">
-                  {photos.toLocaleString($locale)}
-                </td>
-                <td class="text-ellipsis px-4 text-sm">
-                  {videos.toLocaleString($locale)}
-                </td>
-                <td class="text-ellipsis px-4 text-sm">
-                  {diskUsage}
-                  {diskUsageUnit}
-                </td>
-
-                <td class="flex gap-2 text-ellipsis px-4 text-sm">
-                  <Button size="small" onclick={() => handleViewLibrary(library)}>{$t('view')}</Button>
-                </td>
-              </tr>
+              {@const owner = owners[library.id]}
+              <TableRow>
+                <TableCell class={classes.column1}>
+                  <Link href={Route.viewLibrary(library)}>{library.name}</Link>
+                </TableCell>
+                <TableCell class={classes.column2}>
+                  <Link href={Route.viewUser(owner)}>{owner.name}</Link>
+                </TableCell>
+                {#await data.statisticsPromise}
+                  <TableCell class={classes.column3}>
+                    <span class="skeleton-loader inline-block h-4 w-14"></span>
+                  </TableCell>
+                  <TableCell class={classes.column4}>
+                    <span class="skeleton-loader inline-block h-4 w-14"></span>
+                  </TableCell>
+                  <TableCell class={classes.column5}>
+                    <span class="skeleton-loader inline-block h-4 w-20"></span>
+                  </TableCell>
+                {:then loadedStats}
+                  {@const stats = loadedStats[library.id]}
+                  <TableCell class={classes.column3}>
+                    {stats.photos.toLocaleString($locale)}
+                  </TableCell>
+                  <TableCell class={classes.column4}>
+                    {stats.videos.toLocaleString($locale)}
+                  </TableCell>
+                  <TableCell class={classes.column5}>
+                    {@const [diskUsage, diskUsageUnit] = getBytesWithUnit(stats.usage, 0)}
+                    {diskUsage}
+                    {diskUsageUnit}
+                  </TableCell>
+                {:catch}
+                  <TableCell class={classes.column3}>
+                    <span class="skeleton-loader inline-block h-4 w-14"></span>
+                  </TableCell>
+                  <TableCell class={classes.column4}>
+                    <span class="skeleton-loader inline-block h-4 w-14"></span>
+                  </TableCell>
+                  <TableCell class={classes.column5}>
+                    <span class="skeleton-loader inline-block h-4 w-20"></span>
+                  </TableCell>
+                {/await}
+                <TableCell class={classes.column6}>
+                  <ContextMenuButton color="primary" aria-label={$t('open')} items={getActionsForLibrary(library)} />
+                </TableCell>
+              </TableRow>
             {/each}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       {:else}
         <EmptyPlaceholder
+          fullWidth
           text={$t('no_libraries_message')}
-          onClick={() => goto(AppRoute.ADMIN_LIBRARIES_NEW)}
-          class="mt-10 mx-auto"
+          onClick={() => goto(Route.newLibrary())}
+          class="mx-auto mt-10"
         />
       {/if}
 
       {@render children?.()}
     </div>
-  </section>
+  </Container>
 </AdminPageLayout>
+
+<style>
+  .skeleton-loader {
+    position: relative;
+    border-radius: 4px;
+    overflow: hidden;
+    background-color: rgba(156, 163, 175, 0.35);
+  }
+
+  .skeleton-loader::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-repeat: no-repeat;
+    background-image: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0),
+      rgba(255, 255, 255, 0.8) 50%,
+      rgba(255, 255, 255, 0)
+    );
+    background-size: 200% 100%;
+    background-position: 200% 0;
+    animation: skeleton-animation 2000ms infinite;
+  }
+
+  @keyframes skeleton-animation {
+    from {
+      background-position: 200% 0;
+    }
+    to {
+      background-position: -200% 0;
+    }
+  }
+</style>

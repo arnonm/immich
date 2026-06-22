@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
-import 'package:immich_mobile/extensions/theme_extensions.dart';
 import 'package:immich_mobile/extensions/translate_extensions.dart';
-import 'package:immich_mobile/providers/app_settings.provider.dart';
 import 'package:immich_mobile/providers/backup/drift_backup.provider.dart';
-import 'package:immich_mobile/services/app_settings.service.dart';
+import 'package:immich_mobile/providers/infrastructure/settings.provider.dart';
 
 class BackupToggleButton extends ConsumerStatefulWidget {
   final VoidCallback onStart;
@@ -32,7 +30,7 @@ class BackupToggleButtonState extends ConsumerState<BackupToggleButton> with Sin
       end: 1,
     ).animate(CurvedAnimation(parent: _animationController, curve: Curves.easeInOut));
 
-    _isEnabled = ref.read(appSettingsServiceProvider).getSetting(AppSettingsEnum.enableBackup);
+    _isEnabled = ref.read(appConfigProvider).backup.enabled;
   }
 
   @override
@@ -42,7 +40,7 @@ class BackupToggleButtonState extends ConsumerState<BackupToggleButton> with Sin
   }
 
   Future<void> _onToggle(bool value) async {
-    await ref.read(appSettingsServiceProvider).setSetting(AppSettingsEnum.enableBackup, value);
+    await ref.read(settingsProvider).write(.backupEnabled, value);
 
     setState(() {
       _isEnabled = value;
@@ -57,17 +55,15 @@ class BackupToggleButtonState extends ConsumerState<BackupToggleButton> with Sin
 
   @override
   Widget build(BuildContext context) {
-    final enqueueCount = ref.watch(driftBackupProvider.select((state) => state.enqueueCount));
-
-    final enqueueTotalCount = ref.watch(driftBackupProvider.select((state) => state.enqueueTotalCount));
-
-    final isCanceling = ref.watch(driftBackupProvider.select((state) => state.isCanceling));
-
     final uploadTasks = ref.watch(driftBackupProvider.select((state) => state.uploadItems));
 
     final isSyncing = ref.watch(driftBackupProvider.select((state) => state.isSyncing));
 
-    final isProcessing = uploadTasks.isNotEmpty || isSyncing;
+    final iCloudProgress = ref.watch(driftBackupProvider.select((state) => state.iCloudDownloadProgress));
+
+    final errorCount = ref.watch(driftBackupProvider.select((state) => state.errorCount));
+
+    final isProcessing = uploadTasks.isNotEmpty || isSyncing || iCloudProgress.isNotEmpty;
 
     return AnimatedBuilder(
       animation: _animationController,
@@ -115,7 +111,7 @@ class BackupToggleButtonState extends ConsumerState<BackupToggleButton> with Sin
               borderRadius: const BorderRadius.all(Radius.circular(20.5)),
               child: InkWell(
                 borderRadius: const BorderRadius.all(Radius.circular(20.5)),
-                onTap: () => isCanceling ? null : _onToggle(!_isEnabled),
+                onTap: () => _onToggle(!_isEnabled),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                   child: Row(
@@ -154,35 +150,18 @@ class BackupToggleButtonState extends ConsumerState<BackupToggleButton> with Sin
                                 ),
                               ],
                             ),
-                            if (enqueueCount != enqueueTotalCount)
-                              Text(
-                                "queue_status".t(
-                                  context: context,
-                                  args: {'count': enqueueCount.toString(), 'total': enqueueTotalCount.toString()},
+                            if (errorCount > 0)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: Text(
+                                  "upload_error_with_count".t(context: context, args: {'count': '$errorCount'}),
+                                  style: context.textTheme.labelMedium?.copyWith(color: context.colorScheme.error),
                                 ),
-                                style: context.textTheme.labelLarge?.copyWith(
-                                  color: context.colorScheme.onSurfaceSecondary,
-                                ),
-                              ),
-                            if (isCanceling)
-                              Row(
-                                children: [
-                                  Text("canceling".t(), style: context.textTheme.labelLarge),
-                                  const SizedBox(width: 4),
-                                  SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      backgroundColor: context.colorScheme.onSurface.withValues(alpha: 0.2),
-                                    ),
-                                  ),
-                                ],
                               ),
                           ],
                         ),
                       ),
-                      Switch.adaptive(value: _isEnabled, onChanged: (value) => isCanceling ? null : _onToggle(value)),
+                      Switch.adaptive(value: _isEnabled, onChanged: (value) => _onToggle(value)),
                     ],
                   ),
                 ),

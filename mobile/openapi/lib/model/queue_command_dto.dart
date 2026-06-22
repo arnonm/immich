@@ -14,18 +14,19 @@ class QueueCommandDto {
   /// Returns a new [QueueCommandDto] instance.
   QueueCommandDto({
     required this.command,
-    this.force,
+    this.force = const Optional.absent(),
   });
 
   QueueCommand command;
 
+  /// Force the command execution (if applicable)
   ///
   /// Please note: This property should have been non-nullable! Since the specification file
   /// does not include a default value (using the "default:" property), however, the generated
   /// source code must fall back to having a nullable type.
   /// Consider adding a "default:" property in the specification file to hide this note.
   ///
-  bool? force;
+  Optional<bool?> force;
 
   @override
   bool operator ==(Object other) => identical(this, other) || other is QueueCommandDto &&
@@ -44,10 +45,9 @@ class QueueCommandDto {
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
       json[r'command'] = this.command;
-    if (this.force != null) {
-      json[r'force'] = this.force;
-    } else {
-    //  json[r'force'] = null;
+    if (this.force.isPresent) {
+      final value = this.force.value;
+      json[r'force'] = value;
     }
     return json;
   }
@@ -62,7 +62,7 @@ class QueueCommandDto {
 
       return QueueCommandDto(
         command: QueueCommand.fromJson(json[r'command'])!,
-        force: mapValueOfType<bool>(json, r'force'),
+        force: json.containsKey(r'force') ? Optional.present(mapValueOfType<bool>(json, r'force')) : const Optional.absent(),
       );
     }
     return null;

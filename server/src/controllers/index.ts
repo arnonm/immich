@@ -6,9 +6,11 @@ import { AssetMediaController } from 'src/controllers/asset-media.controller';
 import { AssetController } from 'src/controllers/asset.controller';
 import { AuthAdminController } from 'src/controllers/auth-admin.controller';
 import { AuthController } from 'src/controllers/auth.controller';
+import { DatabaseBackupController } from 'src/controllers/database-backup.controller';
 import { DownloadController } from 'src/controllers/download.controller';
 import { DuplicateController } from 'src/controllers/duplicate.controller';
 import { FaceController } from 'src/controllers/face.controller';
+import { IntegrityAdminController } from 'src/controllers/integrity-admin.controller';
 import { JobController } from 'src/controllers/job.controller';
 import { LibraryController } from 'src/controllers/library.controller';
 import { MaintenanceController } from 'src/controllers/maintenance.controller';
@@ -34,6 +36,7 @@ import { TimelineController } from 'src/controllers/timeline.controller';
 import { TrashController } from 'src/controllers/trash.controller';
 import { UserAdminController } from 'src/controllers/user-admin.controller';
 import { UserController } from 'src/controllers/user.controller';
+import { VideoStreamController } from 'src/controllers/video-stream.controller';
 import { ViewController } from 'src/controllers/view.controller';
 import { WorkflowController } from 'src/controllers/workflow.controller';
 
@@ -46,9 +49,11 @@ export const controllers = [
   AssetMediaController,
   AuthController,
   AuthAdminController,
+  DatabaseBackupController,
   DownloadController,
   DuplicateController,
   FaceController,
+  IntegrityAdminController,
   JobController,
   LibraryController,
   MaintenanceController,
@@ -74,6 +79,7 @@ export const controllers = [
   TrashController,
   UserAdminController,
   UserController,
+  VideoStreamController,
   ViewController,
   WorkflowController,
 ];

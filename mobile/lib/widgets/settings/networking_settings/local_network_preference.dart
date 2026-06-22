@@ -5,26 +5,32 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
+import 'package:immich_mobile/extensions/translate_extensions.dart';
 import 'package:immich_mobile/providers/auth.provider.dart';
 import 'package:immich_mobile/providers/network.provider.dart';
+import 'package:immich_ui/immich_ui.dart';
 
 class LocalNetworkPreference extends HookConsumerWidget {
   const LocalNetworkPreference({super.key, required this.enabled});
 
   final bool enabled;
 
-  Future<String?> _showEditDialog(BuildContext context, String title, String hintText, String initialValue) {
+  Future<String?> _showEditDialog(
+    BuildContext context,
+    String title,
+    String hintText,
+    String initialValue, {
+    bool isUrlField = false,
+  }) {
     final controller = TextEditingController(text: initialValue);
 
     return showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(title),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: InputDecoration(border: const OutlineInputBorder(), hintText: hintText),
-        ),
+        content: isUrlField
+            ? ImmichURLInput(controller: controller, autofocus: true, keyboardAction: .done, hintText: hintText)
+            : ImmichTextInput(controller: controller, autofocus: true, keyboardAction: .done, hintText: hintText),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -80,6 +86,7 @@ class LocalNetworkPreference extends HookConsumerWidget {
         "server_endpoint".tr(),
         "http://local-ip:2283",
         localEndpointText.value,
+        isUrlField: true,
       );
 
       if (localEndpoint != null) {
@@ -155,7 +162,7 @@ class LocalNetworkPreference extends HookConsumerWidget {
                               style: context.textTheme.labelLarge?.copyWith(
                                 fontWeight: FontWeight.bold,
                                 color: enabled ? context.primaryColor : context.colorScheme.onSurface.withAlpha(100),
-                                fontFamily: 'Inconsolata',
+                                fontFamily: 'GoogleSansCode',
                               ),
                             ),
                       trailing: IconButton(
@@ -167,15 +174,14 @@ class LocalNetworkPreference extends HookConsumerWidget {
                       enabled: enabled,
                       contentPadding: const EdgeInsets.only(left: 24, right: 8),
                       leading: const Icon(Icons.lan_rounded),
-                      title: Text("server_endpoint".tr()),
+                      title: Text("server_endpoint".t(context: context)),
                       subtitle: localEndpointText.value.isEmpty
                           ? const Text("http://local-ip:2283")
                           : Text(
                               localEndpointText.value,
                               style: context.textTheme.labelLarge?.copyWith(
-                                fontWeight: FontWeight.bold,
                                 color: enabled ? context.primaryColor : context.colorScheme.onSurface.withAlpha(100),
-                                fontFamily: 'Inconsolata',
+                                fontFamily: 'GoogleSansCode',
                               ),
                             ),
                       trailing: IconButton(
@@ -190,7 +196,7 @@ class LocalNetworkPreference extends HookConsumerWidget {
                         height: 48,
                         child: OutlinedButton.icon(
                           icon: const Icon(Icons.wifi_find_rounded),
-                          label: Text('use_current_connection'.tr().toUpperCase()),
+                          label: Text('use_current_connection'.t(context: context)),
                           onPressed: enabled ? autofillCurrentNetwork : null,
                         ),
                       ),

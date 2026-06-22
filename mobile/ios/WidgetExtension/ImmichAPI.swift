@@ -2,7 +2,7 @@ import Foundation
 import SwiftUI
 import WidgetKit
 
-let IMMICH_SHARE_GROUP = "group.app.immich.share"
+let IMMICH_SHARE_GROUP = Bundle.main.object(forInfoDictionaryKey: "AppGroupId") as! String
 
 enum WidgetError: Error, Codable {
   case noLogin
@@ -225,7 +225,7 @@ class ImmichAPI {
   }
 
   func fetchImage(asset: Asset) async throws(FetchError) -> UIImage {
-    let thumbnailParams = [URLQueryItem(name: "size", value: "preview")]
+    let thumbnailParams = [URLQueryItem(name: "size", value: "preview"), URLQueryItem(name: "edited", value: "true")]
     let assetEndpoint = "/assets/" + asset.id + "/thumbnail"
 
     guard

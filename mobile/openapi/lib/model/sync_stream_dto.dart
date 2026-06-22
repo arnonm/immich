@@ -13,18 +13,20 @@ part of openapi.api;
 class SyncStreamDto {
   /// Returns a new [SyncStreamDto] instance.
   SyncStreamDto({
-    this.reset,
+    this.reset = const Optional.absent(),
     this.types = const [],
   });
 
+  /// Reset sync state
   ///
   /// Please note: This property should have been non-nullable! Since the specification file
   /// does not include a default value (using the "default:" property), however, the generated
   /// source code must fall back to having a nullable type.
   /// Consider adding a "default:" property in the specification file to hide this note.
   ///
-  bool? reset;
+  Optional<bool?> reset;
 
+  /// Sync request types
   List<SyncRequestType> types;
 
   @override
@@ -43,10 +45,9 @@ class SyncStreamDto {
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
-    if (this.reset != null) {
-      json[r'reset'] = this.reset;
-    } else {
-    //  json[r'reset'] = null;
+    if (this.reset.isPresent) {
+      final value = this.reset.value;
+      json[r'reset'] = value;
     }
       json[r'types'] = this.types;
     return json;
@@ -61,7 +62,7 @@ class SyncStreamDto {
       final json = value.cast<String, dynamic>();
 
       return SyncStreamDto(
-        reset: mapValueOfType<bool>(json, r'reset'),
+        reset: json.containsKey(r'reset') ? Optional.present(mapValueOfType<bool>(json, r'reset')) : const Optional.absent(),
         types: SyncRequestType.listFromJson(json[r'types']),
       );
     }

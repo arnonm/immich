@@ -14,14 +14,16 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/domain/models/store.model.dart';
 import 'package:immich_mobile/entities/store.entity.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
+import 'package:immich_mobile/extensions/translate_extensions.dart';
+import 'package:immich_mobile/infrastructure/repositories/settings.repository.dart';
 import 'package:immich_mobile/providers/auth.provider.dart';
 import 'package:immich_mobile/providers/background_sync.provider.dart';
-import 'package:immich_mobile/providers/backup/backup.provider.dart';
 import 'package:immich_mobile/providers/gallery_permission.provider.dart';
 import 'package:immich_mobile/providers/oauth.provider.dart';
 import 'package:immich_mobile/providers/server_info.provider.dart';
+import 'package:immich_mobile/providers/view_intent/view_intent_handler.provider.dart';
 import 'package:immich_mobile/providers/websocket.provider.dart';
-import 'package:immich_mobile/repositories/local_files_manager.repository.dart';
+import 'package:immich_mobile/repositories/permission.repository.dart';
 import 'package:immich_mobile/routing/router.dart';
 import 'package:immich_mobile/utils/provider_utils.dart';
 import 'package:immich_mobile/utils/url_helper.dart';
@@ -29,32 +31,51 @@ import 'package:immich_mobile/utils/version_compatibility.dart';
 import 'package:immich_mobile/widgets/common/immich_logo.dart';
 import 'package:immich_mobile/widgets/common/immich_title_text.dart';
 import 'package:immich_mobile/widgets/common/immich_toast.dart';
-import 'package:immich_mobile/widgets/forms/login/email_input.dart';
-import 'package:immich_mobile/widgets/forms/login/loading_icon.dart';
-import 'package:immich_mobile/widgets/forms/login/login_button.dart';
-import 'package:immich_mobile/widgets/forms/login/o_auth_login_button.dart';
-import 'package:immich_mobile/widgets/forms/login/password_input.dart';
-import 'package:immich_mobile/widgets/forms/login/server_endpoint_input.dart';
+import 'package:immich_ui/immich_ui.dart';
 import 'package:logging/logging.dart';
 import 'package:openapi/api.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 class LoginForm extends HookConsumerWidget {
   LoginForm({super.key});
 
   final log = Logger('LoginForm');
 
+  String? _validateUrl(String? url) {
+    if (url == null || url.isEmpty) {
+      return null;
+    }
+
+    final parsedUrl = Uri.tryParse(url);
+    if (parsedUrl == null || !parsedUrl.isAbsolute || !parsedUrl.scheme.startsWith("http") || parsedUrl.host.isEmpty) {
+      return 'login_form_err_invalid_url'.tr();
+    }
+
+    return null;
+  }
+
+  String? _validateEmail(String? email) {
+    if (email == null || email == '') {
+      return null;
+    }
+    if (email.endsWith(' ')) {
+      return 'login_form_err_trailing_whitespace'.tr();
+    }
+    if (email.startsWith(' ')) {
+      return 'login_form_err_leading_whitespace'.tr();
+    }
+    if (email.contains(' ') || !email.contains('@')) {
+      return 'login_form_err_invalid_email'.tr();
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final emailController = useTextEditingController.fromValue(TextEditingValue.empty);
     final passwordController = useTextEditingController.fromValue(TextEditingValue.empty);
     final serverEndpointController = useTextEditingController.fromValue(TextEditingValue.empty);
-    final emailFocusNode = useFocusNode();
     final passwordFocusNode = useFocusNode();
-    final serverEndpointFocusNode = useFocusNode();
-    final isLoading = useState<bool>(false);
-    final isLoadingServer = useState<bool>(false);
     final isOauthEnable = useState<bool>(false);
     final isPasswordLoginEnable = useState<bool>(false);
     final oAuthButtonLabel = useState<String>('OAuth');
@@ -96,7 +117,6 @@ class LoginForm extends HookConsumerWidget {
       }
 
       try {
-        isLoadingServer.value = true;
         final endpoint = await ref.read(authProvider.notifier).validateServerUrl(serverUrl);
 
         // Fetch and load server config and features
@@ -120,7 +140,6 @@ class LoginForm extends HookConsumerWidget {
         );
         isOauthEnable.value = false;
         isPasswordLoginEnable.value = true;
-        isLoadingServer.value = false;
       } on HandshakeException {
         ImmichToast.show(
           context: context,
@@ -130,7 +149,6 @@ class LoginForm extends HookConsumerWidget {
         );
         isOauthEnable.value = false;
         isPasswordLoginEnable.value = true;
-        isLoadingServer.value = false;
       } catch (e) {
         ImmichToast.show(
           context: context,
@@ -140,10 +158,7 @@ class LoginForm extends HookConsumerWidget {
         );
         isOauthEnable.value = false;
         isPasswordLoginEnable.value = true;
-        isLoadingServer.value = false;
       }
-
-      isLoadingServer.value = false;
     }
 
     useEffect(() {
@@ -168,18 +183,20 @@ class LoginForm extends HookConsumerWidget {
 
     Future<void> handleSyncFlow() async {
       final backgroundManager = ref.read(backgroundSyncProvider);
+      final viewIntentHandler = ref.read(viewIntentHandlerProvider);
 
       await backgroundManager.syncLocal(full: true);
       await backgroundManager.syncRemote();
+      await viewIntentHandler.flushDeferredViewIntent();
       await backgroundManager.hashAssets();
 
-      if (Store.get(StoreKey.syncAlbums, false)) {
+      if (SettingsRepository.instance.appConfig.backup.syncAlbums) {
         await backgroundManager.syncLinkedAlbum();
       }
     }
 
     getManageMediaPermission() async {
-      final hasPermission = await ref.read(localFilesManagerRepositoryProvider).hasManageMediaPermission();
+      final hasPermission = await ref.read(permissionRepositoryProvider).hasManageMediaPermission();
       if (!hasPermission) {
         await showDialog(
           context: context,
@@ -210,7 +227,7 @@ class LoginForm extends HookConsumerWidget {
                 ),
                 TextButton(
                   onPressed: () {
-                    ref.read(localFilesManagerRepositoryProvider).requestManageMediaPermission();
+                    unawaited(ref.read(permissionRepositoryProvider).requestManageMediaPermission());
                     Navigator.of(context).pop();
                   },
                   child: Text(
@@ -230,8 +247,6 @@ class LoginForm extends HookConsumerWidget {
     login() async {
       TextInput.finishAutofillContext();
 
-      isLoading.value = true;
-
       // Invalidate all api repository provider instance to take into account new access token
       invalidateAllApiRepositoryProviders(ref);
 
@@ -241,18 +256,14 @@ class LoginForm extends HookConsumerWidget {
         if (result.shouldChangePassword && !result.isAdmin) {
           unawaited(context.pushRoute(const ChangePasswordRoute()));
         } else {
-          final isBeta = Store.isBetaTimelineEnabled;
-          if (isBeta) {
-            await ref.read(galleryPermissionNotifier.notifier).requestGalleryPermission();
-            if (isSyncRemoteDeletionsMode()) {
-              await getManageMediaPermission();
-            }
-            unawaited(handleSyncFlow());
-            ref.read(websocketProvider.notifier).connect();
-            unawaited(context.replaceRoute(const TabShellRoute()));
-            return;
+          await ref.read(galleryPermissionNotifier.notifier).requestGalleryPermission();
+          if (isSyncRemoteDeletionsMode()) {
+            await getManageMediaPermission();
           }
-          unawaited(context.replaceRoute(const TabControllerRoute()));
+          unawaited(handleSyncFlow());
+          ref.read(websocketProvider.notifier).connect();
+          unawaited(context.router.replaceAll([const TabShellRoute()]));
+          return;
         }
       } catch (error) {
         ImmichToast.show(
@@ -261,8 +272,6 @@ class LoginForm extends HookConsumerWidget {
           toastType: ToastType.error,
           gravity: ToastGravity.TOP,
         );
-      } finally {
-        isLoading.value = false;
       }
     }
 
@@ -306,8 +315,6 @@ class LoginForm extends HookConsumerWidget {
           codeChallenge,
         );
 
-        isLoading.value = true;
-
         // Invalidate all api repository provider instance to take into account new access token
         invalidateAllApiRepositoryProviders(ref);
       } catch (error, stack) {
@@ -319,7 +326,6 @@ class LoginForm extends HookConsumerWidget {
           toastType: ToastType.error,
           gravity: ToastGravity.TOP,
         );
-        isLoading.value = false;
         return;
       }
 
@@ -338,22 +344,13 @@ class LoginForm extends HookConsumerWidget {
               .saveAuthInfo(accessToken: loginResponseDto.accessToken);
 
           if (isSuccess) {
-            isLoading.value = false;
-            final permission = ref.watch(galleryPermissionNotifier);
-            final isBeta = Store.isBetaTimelineEnabled;
-            if (!isBeta && (permission.isGranted || permission.isLimited)) {
-              unawaited(ref.watch(backupProvider.notifier).resumeBackup());
+            await ref.read(galleryPermissionNotifier.notifier).requestGalleryPermission();
+            if (isSyncRemoteDeletionsMode()) {
+              await getManageMediaPermission();
             }
-            if (isBeta) {
-              await ref.read(galleryPermissionNotifier.notifier).requestGalleryPermission();
-              if (isSyncRemoteDeletionsMode()) {
-                await getManageMediaPermission();
-              }
-              unawaited(handleSyncFlow());
-              unawaited(context.replaceRoute(const TabShellRoute()));
-              return;
-            }
-            unawaited(context.replaceRoute(const TabControllerRoute()));
+            unawaited(handleSyncFlow());
+            unawaited(context.router.replaceAll([const TabShellRoute()]));
+            return;
           }
         } catch (error, stack) {
           log.severe('Error logging in with OAuth: $error', stack);
@@ -364,9 +361,7 @@ class LoginForm extends HookConsumerWidget {
             toastType: ToastType.error,
             gravity: ToastGravity.TOP,
           );
-        } finally {
-          isLoading.value = false;
-        }
+        } finally {}
       } else {
         ImmichToast.show(
           context: context,
@@ -374,64 +369,8 @@ class LoginForm extends HookConsumerWidget {
           toastType: ToastType.info,
           gravity: ToastGravity.TOP,
         );
-        isLoading.value = false;
         return;
       }
-    }
-
-    buildSelectServer() {
-      const buttonRadius = 25.0;
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          ServerEndpointInput(
-            controller: serverEndpointController,
-            focusNode: serverEndpointFocusNode,
-            onSubmit: getServerAuthSettings,
-          ),
-          const SizedBox(height: 18),
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(buttonRadius),
-                        bottomLeft: Radius.circular(buttonRadius),
-                      ),
-                    ),
-                  ),
-                  onPressed: () => context.pushRoute(const SettingsRoute()),
-                  icon: const Icon(Icons.settings_rounded),
-                  label: const Text(""),
-                ),
-              ),
-              const SizedBox(width: 1),
-              Expanded(
-                flex: 3,
-                child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.only(
-                        topRight: Radius.circular(buttonRadius),
-                        bottomRight: Radius.circular(buttonRadius),
-                      ),
-                    ),
-                  ),
-                  onPressed: isLoadingServer.value ? null : getServerAuthSettings,
-                  icon: const Icon(Icons.arrow_forward_rounded),
-                  label: const Text('next', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)).tr(),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          if (isLoadingServer.value) const LoadingIcon(),
-        ],
-      );
     }
 
     buildVersionCompatWarning() {
@@ -455,66 +394,100 @@ class LoginForm extends HookConsumerWidget {
       );
     }
 
-    buildLogin() {
-      return AutofillGroup(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            buildVersionCompatWarning(),
-            Text(
-              sanitizeUrl(serverEndpointController.text),
-              style: context.textTheme.displaySmall,
-              textAlign: TextAlign.center,
+    final serverSelectionOrLogin = serverEndpoint.value == null
+        ? Padding(
+            padding: const EdgeInsets.only(top: ImmichSpacing.md),
+            child: Column(
+              mainAxisSize: MainAxisSize.max,
+              children: [
+                ImmichForm(
+                  onSubmit: getServerAuthSettings,
+                  submitText: 'next'.t(context: context),
+                  submitIcon: Icons.arrow_forward_rounded,
+                  builder: (_, form) => ImmichURLInput(
+                    controller: serverEndpointController,
+                    label: 'login_form_endpoint_url'.t(context: context),
+                    hintText: 'login_form_endpoint_hint'.t(context: context),
+                    validator: _validateUrl,
+                    keyboardAction: .next,
+                    onSubmit: (_) => form.submit(),
+                  ),
+                ),
+                ImmichTextButton(
+                  labelText: 'settings'.t(context: context),
+                  icon: Icons.settings,
+                  variant: ImmichVariant.ghost,
+                  onPressed: () => context.pushRoute(const SettingsRoute()),
+                ),
+              ],
             ),
-            if (isPasswordLoginEnable.value) ...[
-              const SizedBox(height: 18),
-              EmailInput(
-                controller: emailController,
-                focusNode: emailFocusNode,
-                onSubmit: passwordFocusNode.requestFocus,
-              ),
-              const SizedBox(height: 8),
-              PasswordInput(controller: passwordController, focusNode: passwordFocusNode, onSubmit: login),
-            ],
-
-            // Note: This used to have an AnimatedSwitcher, but was removed
-            // because of https://github.com/flutter/flutter/issues/120874
-            isLoading.value
-                ? const LoadingIcon()
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const SizedBox(height: 18),
-                      if (isPasswordLoginEnable.value) LoginButton(onPressed: login),
-                      if (isOauthEnable.value) ...[
-                        if (isPasswordLoginEnable.value)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                            child: Divider(color: context.isDarkTheme ? Colors.white : Colors.black),
-                          ),
-                        OAuthLoginButton(
-                          serverEndpointController: serverEndpointController,
-                          buttonLabel: oAuthButtonLabel.value,
-                          isLoading: isLoading,
-                          onPressed: oAuthLogin,
+          )
+        : AutofillGroup(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.max,
+              children: [
+                buildVersionCompatWarning(),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: ImmichSpacing.md),
+                  child: Text(
+                    sanitizeUrl(serverEndpointController.text),
+                    style: context.textTheme.displaySmall,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                if (isPasswordLoginEnable.value)
+                  ImmichForm(
+                    onSubmit: login,
+                    submitText: 'login'.t(context: context),
+                    submitIcon: Icons.login_rounded,
+                    builder: (context, form) => Column(
+                      spacing: ImmichSpacing.md,
+                      children: [
+                        ImmichTextInput(
+                          controller: emailController,
+                          label: 'email'.t(context: context),
+                          hintText: 'login_form_email_hint'.t(context: context),
+                          validator: _validateEmail,
+                          keyboardAction: TextInputAction.next,
+                          keyboardType: TextInputType.emailAddress,
+                          autofillHints: const [AutofillHints.email],
+                          onSubmit: (_) => passwordFocusNode.requestFocus(),
+                        ),
+                        ImmichPasswordInput(
+                          controller: passwordController,
+                          focusNode: passwordFocusNode,
+                          label: 'password'.t(context: context),
+                          hintText: 'login_form_password_hint'.t(context: context),
+                          keyboardAction: TextInputAction.go,
+                          onSubmit: (_) => form.submit(),
                         ),
                       ],
-                    ],
+                    ),
                   ),
-            if (!isOauthEnable.value && !isPasswordLoginEnable.value) Center(child: const Text('login_disabled').tr()),
-            const SizedBox(height: 12),
-            TextButton.icon(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: () => serverEndpoint.value = null,
-              label: const Text('back').tr(),
+                if (isOauthEnable.value)
+                  ImmichForm(
+                    onSubmit: oAuthLogin,
+                    submitText: oAuthButtonLabel.value,
+                    submitIcon: Icons.pin_outlined,
+                    builder: (context, _) => isPasswordLoginEnable.value
+                        ? Padding(
+                            padding: const EdgeInsets.only(left: 18.0, right: 18.0, top: 12.0),
+                            child: Divider(color: context.isDarkTheme ? Colors.white : Colors.black, height: 5),
+                          )
+                        : const SizedBox.shrink(),
+                  ),
+                if (!isOauthEnable.value && !isPasswordLoginEnable.value)
+                  Center(child: const Text('login_disabled').tr()),
+                ImmichTextButton(
+                  labelText: 'back'.t(context: context),
+                  icon: Icons.arrow_back,
+                  variant: ImmichVariant.ghost,
+                  onPressed: () => serverEndpoint.value = null,
+                ),
+              ],
             ),
-          ],
-        ),
-      );
-    }
-
-    final serverSelectionOrLogin = serverEndpoint.value == null ? buildSelectServer() : buildLogin();
+          );
 
     return LayoutBuilder(
       builder: (context, constraints) {
