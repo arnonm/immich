@@ -370,12 +370,16 @@ export class PersonRepository {
       )
       .selectFrom(['similarity_threshold', 'person'])
       .selectAll('person')
-      .where('person.ownerId', '=', userId)
+      .where((eb) =>
+        eb.or([eb('person.ownerId', '=', userId), hasPermissions(userId, [SharingPermission.PersonRead])(eb)]),
+      )
       .where(() => sql`f_unaccent("person"."name") %> f_unaccent(${personName})`)
       .orderBy(sql`f_unaccent("person"."name") <->>> f_unaccent(${personName})`)
       .orderBy((eb) => eb('person.ownerId', '=', userId), 'desc')
       .limit(100)
-      .$if(!withHidden, (qb) => qb.where('person.isHidden', '=', false))
+      .$if(!withHidden, (qb) =>
+        qb.where((eb) => eb.or([eb('person.isHidden', '=', false), eb('person.ownerId', '=', userId)])),
+      )
       .execute();
   }
 
@@ -385,8 +389,15 @@ export class PersonRepository {
       .selectFrom('person')
       .select(['person.id', 'person.name'])
       .distinctOn((eb) => eb.fn('lower', ['person.name']))
-      .where((eb) => eb.and([eb('person.ownerId', '=', userId), eb('person.name', '!=', '')]))
-      .$if(!withHidden, (qb) => qb.where('person.isHidden', '=', false))
+      .where((eb) =>
+        eb.and([
+          eb.or([eb('person.ownerId', '=', userId), hasPermissions(userId, [SharingPermission.PersonRead])(eb)]),
+          eb('person.name', '!=', ''),
+        ]),
+      )
+      .$if(!withHidden, (qb) =>
+        qb.where((eb) => eb.or([eb('person.isHidden', '=', false), eb('person.ownerId', '=', userId)])),
+      )
       .execute();
   }
 

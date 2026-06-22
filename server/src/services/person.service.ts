@@ -72,7 +72,7 @@ export class PersonService extends BaseService {
     const { total, hidden } = await this.personRepository.getNumberOfPeople(auth.user.id);
 
     return {
-      people: items.map((person) => mapPerson(person)),
+      people: items.map((person) => mapPerson(person, { viewerId: auth.user.id })),
       hasNextPage,
       total,
       hidden,
@@ -122,7 +122,7 @@ export class PersonService extends BaseService {
       await this.createNewFeaturePhoto([face.person.id]);
     }
 
-    return await this.findOrFail(personId).then(mapPerson);
+    return await this.findOrFail(personId).then((person) => mapPerson(person, { viewerId: auth.user.id }));
   }
 
   async getFacesById(auth: AuthDto, dto: FaceDto): Promise<AssetFaceResponseDto[]> {
@@ -131,7 +131,7 @@ export class PersonService extends BaseService {
     const asset = await this.assetRepository.getForFaces(dto.id);
     const assetDimensions = getDimensions(asset);
 
-    return faces.map((face) => mapFaces(face, asset.edits, assetDimensions));
+    return faces.map((face) => mapFaces(face, asset.edits, assetDimensions, { viewerId: auth.user.id }));
   }
 
   async createNewFeaturePhoto(changeFeaturePhoto: string[]) {
@@ -154,7 +154,7 @@ export class PersonService extends BaseService {
 
   async getById(auth: AuthDto, id: string): Promise<PersonResponseDto> {
     await this.requireAccess({ auth, permission: Permission.PersonRead, ids: [id] });
-    return this.findOrFail(id).then(mapPerson);
+    return this.findOrFail(id).then((person) => mapPerson(person, { viewerId: auth.user.id }));
   }
 
   async getStatistics(auth: AuthDto, id: string): Promise<PersonStatisticsResponseDto> {

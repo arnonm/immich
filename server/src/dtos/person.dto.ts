@@ -169,7 +169,24 @@ const PeopleResponseSchema = z
   .describe('People response');
 export class PeopleResponseDto extends createZodDto(PeopleResponseSchema) {}
 
-export function mapPerson(person: MaybeDehydrated<Person>): PersonResponseDto {
+export type MapPersonOptions = {
+  viewerId?: string;
+};
+
+export function mapPerson(person: MaybeDehydrated<Person>, options?: MapPersonOptions): PersonResponseDto {
+  const isOwner = !options?.viewerId || person.ownerId === options.viewerId;
+
+  if (!isOwner) {
+    return {
+      id: person.id,
+      name: person.name,
+      birthDate: null,
+      thumbnailPath: person.thumbnailPath,
+      isHidden: false,
+      faceClusterId: person.faceClusterId,
+    };
+  }
+
   return {
     id: person.id,
     name: person.name,
@@ -210,9 +227,10 @@ export function mapFaces(
   face: AssetFace,
   edits?: AssetEditActionItem[],
   assetDimensions?: ImageDimensions,
+  options?: MapPersonOptions,
 ): AssetFaceResponseDto {
   return {
     ...mapFacesWithoutPerson(face, edits, assetDimensions),
-    person: face.person ? mapPerson(face.person) : null,
+    person: face.person ? mapPerson(face.person, options) : null,
   };
 }

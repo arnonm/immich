@@ -16,12 +16,13 @@ import {
 import { BulkIdErrorReason, BulkIdResponseDto, BulkIdsDto } from 'src/dtos/asset-ids.response.dto';
 import { AuthDto } from 'src/dtos/auth.dto';
 import { MapMarkerResponseDto } from 'src/dtos/map.dto';
-import { AlbumUserRole, Permission, SharingPermission } from 'src/enum';
+import { AlbumUserRole, Permission } from 'src/enum';
 import { AlbumAssetCount, AlbumInfoOptions } from 'src/repositories/album.repository';
 import { BaseService } from 'src/services/base.service';
 import { addAssets, removeAssets } from 'src/utils/asset.util';
 import { asDateString } from 'src/utils/date';
 import { getPreferences } from 'src/utils/preferences';
+import { getAlbumPermissionsForRole } from 'src/utils/sharing-permissions';
 
 @Injectable()
 export class AlbumService extends BaseService {
@@ -321,7 +322,7 @@ export class AlbumService extends BaseService {
         userId,
         albumId: id,
         role,
-        permissions: [SharingPermission.AssetRead, SharingPermission.ExifRead],
+        permissions: getAlbumPermissionsForRole(role),
       });
 
       await this.eventRepository.emit('AlbumInvite', { id, userId, senderName: auth.user.name });
@@ -363,15 +364,23 @@ export class AlbumService extends BaseService {
   }
 
   async updateSelf(auth: AuthDto, albumId: string, dto: UpdateSharingPermissionsDto): Promise<void> {
-    await this.requireAccess({ auth, permission: Permission.AlbumAssetCreate, ids: [albumId] });
-    await this.albumUserRepository.update(
-      { albumId, userId: auth.user.id },
-      { permissions: dto.permissions, inTimeline: dto.inTimeline },
-    );
+    await this.requireAccess({ auth, permission: Permission.AlbumRead, ids: [albumId] });
+
+    const albumUser = await this.albumUserRepository.get({ albumId, userId: auth.user.id });
+    if (!albumUser) {
+      throw new BadRequestException('Album user not found');
+    }
+
+    const values =
+      albumUser.role === AlbumUserRole.Editor
+        ? { permissions: dto.permissions, inTimeline: dto.inTimeline }
+        : { inTimeline: dto.inTimeline };
+
+    await this.albumUserRepository.update({ albumId, userId: auth.user.id }, values);
   }
 
   async getSelf(auth: AuthDto, albumId: string): Promise<SharingPermissionsResponseDto> {
-    await this.requireAccess({ auth, permission: Permission.AlbumAssetCreate, ids: [albumId] });
+    await this.requireAccess({ auth, permission: Permission.AlbumRead, ids: [albumId] });
     return this.albumUserRepository.get({ userId: auth.user.id, albumId });
   }
 

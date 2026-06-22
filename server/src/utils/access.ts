@@ -263,6 +263,14 @@ const checkOtherAccess = async (access: AccessRepository, request: OtherAccessRe
       return setUnion(isOwner, isShared);
     }
 
+    case Permission.FaceRead: {
+      const isOwner = await access.person.checkFaceOwnerAccess(auth.user.id, ids);
+      const isShared = await access.person.checkSharedFaceAccess(auth.user.id, setDifference(ids, isOwner), [
+        SharingPermission.PersonRead,
+      ]);
+      return setUnion(isOwner, isShared);
+    }
+
     case Permission.NotificationRead:
     case Permission.NotificationUpdate:
     case Permission.NotificationDelete: {

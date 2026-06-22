@@ -73,7 +73,7 @@ export class AlbumUserTable {
   @Column({
     array: true,
     enum: sharing_permission_enum,
-    default: [SharingPermission.AssetRead, SharingPermission.ExifRead],
+    default: [SharingPermission.AssetRead, SharingPermission.ExifRead, SharingPermission.PersonRead],
   })
   permissions!: Generated<SharingPermission[]>;
 
